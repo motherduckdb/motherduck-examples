@@ -1,0 +1,99 @@
+version: 2
+
+models:
+  - name: reviews_attributes
+    description: "Attributes extracted from reviews data ingested from the webshop database"    
+    columns:      
+      - name: parent_asin
+        description: "The parent ASIN of the product"
+        data_tests:
+          - not_null
+      - name: title
+        description: "The title of the review"
+      - name: text
+        description: "The text of the review"        
+      - name: sentiment
+        description: "The sentiment of the review"
+        data_tests:
+          - accepted_values:
+              values: ['positive', 'neutral', 'negative']
+      - name: product_features
+        description: "Features mentioned in the review"        
+      - name: pros
+        description: "Pros mentioned in the review"        
+      - name: cons
+        description: "Cons mentioned in the review"        
+      - name: has_size_info
+        description: "Indicates if the review mentions size information"      
+      - name: mentions_price
+        description: "Indicates if the review mentions price information"        
+      - name: mentions_shipping
+        description: "Indicates if the review mentions shipping information"        
+      - name: mentions_packaging
+        description: "Indicates if the review mentions packaging information"        
+      - name: competitor_mentions
+        description: "Competitors mentioned in the review"        
+      - name: previous_version_comparison
+        description: "Indicates if the review compares the product to a previous version"        
+      - name: use_case
+        description: "Use cases mentioned in the review"        
+      - name: purchase_reason
+        description: "Purchase reasons mentioned in the review"        
+      - name: time_owned
+        description: "The time the reviewer has owned the product"        
+      - name: reported_issues
+        description: "Issues reported in the review"        
+      - name: quality_concerns
+        description: "Quality concerns mentioned in the review"        
+      - name: customer_service_interaction
+        description: "Indicates if the review mentions customer service interaction"        
+      - name: customer_service_sentiment
+        description: "The sentiment of the customer service interaction"        
+  
+  - name: reviews_attributes_by_product
+    description: "Attributes extracted from reviews data ingested from the webshop database, grouped by product"
+    columns:
+      - name: parent_asin
+        description: "The parent ASIN of the product"
+        data_tests:
+          - not_null
+      - name: product_features
+        description: "Features mentioned in the reviews, aggregated by product"
+      - name: pros
+        description: "Pros mentioned in the reviews, aggregated by product"
+      - name: cons
+        description: "Cons mentioned in the reviews, aggregated by product"
+      - name: competitor_mentions
+        description: "Competitors mentioned in the reviews, aggregated by product"
+      - name: use_case
+        description: "Use cases mentioned in the reviews, aggregated by product"
+      - name: purchase_reason
+        description: "Purchase reasons mentioned in the reviews, aggregated by product"
+      - name: reported_issues
+        description: "Issues reported in the reviews, aggregated by product"
+      - name: quality_concerns
+        description: "Quality concerns mentioned in the reviews, aggregated by product"
+
+  - name: reviews_attributes_sentiment_by_product
+    description: "Sentiment metrics aggregated by product"
+    columns:
+      - name: parent_asin
+        description: "The parent ASIN of the product"
+        data_tests:
+          - not_null
+      - name: positive_count
+        description: "Count of positive reviews"
+      - name: neutral_count
+        description: "Count of neutral reviews"
+      - name: negative_count
+        description: "Count of negative reviews"
+      - name: sentiment_score
+        description: "Normalized sentiment score for overall reviews"
+      - name: positive_service_count
+        description: "Count of positive customer service interactions"
+      - name: neutral_service_count
+        description: "Count of neutral customer service interactions"
+      - name: negative_service_count
+        description: "Count of negative customer service interactions"
+      - name: service_sentiment_score
+        description: "Normalized sentiment score for customer service interactions"

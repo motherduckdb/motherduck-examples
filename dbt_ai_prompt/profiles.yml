@@ -1,0 +1,13 @@
+dbt_md_prompt:
+  outputs:
+    dev:
+      type: duckdb
+      schema: main
+      path: md:webshop
+      threads: 1
+    local:
+      type: duckdb
+      schema: main
+      path: webshop.duckdb
+      threads: 1
+  target: dev
