@@ -23,7 +23,7 @@ from
                 || '```'
                 || 'Here is the review text:'
                 || '```'
-                || 'text'
+                || text
                 || '```',
                 struct := {
                     -- Sentiment
