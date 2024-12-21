@@ -32,7 +32,7 @@ In this example, data flow from:
 
 ```mermaid
 graph TD
-    A[Cloud] -->|Data Flow 1| B[Local]
-    B -->|Data Flow 2| C[Cloud]
+    A[my_first_dbt_model] -->|cloud to local| B[my_second_dbt_model]
+    B -->|local to cloud| C[my_third_dbt_model]
 ```
 
