@@ -31,9 +31,9 @@ In order to use the local model, we need to use the `database` parameter in the 
 In this example, data flows from:
 
 ```mermaid
-graph TD
-    A[my_first_dbt_model] -->|cloud to local| B[my_second_dbt_model]
-    B -->|local to cloud| C[my_third_dbt_model]
+graph LR
+    A[my_first_dbt_model (cloud)] --> B[my_second_dbt_model (local)]
+    B --> C[my_third_dbt_model (cloud)]
 ```
 
 ## Running the project
