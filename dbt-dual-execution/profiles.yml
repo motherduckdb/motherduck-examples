@@ -1,0 +1,8 @@
+dual_execution:
+  outputs:
+    dev:
+      type: duckdb
+      path: "md:my_db"
+      attach:
+        - path: local.db
+  target: dev
