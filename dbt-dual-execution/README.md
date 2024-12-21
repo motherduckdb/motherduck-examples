@@ -32,8 +32,8 @@ In this example, data flows from:
 
 ```mermaid
 graph LR
-    A[my_first_dbt_model (cloud)] --> B[my_second_dbt_model (local)]
-    B --> C[my_third_dbt_model (cloud)]
+    A[my_first_dbt_model - cloud] --> B[my_second_dbt_model - local]
+    B --> C[my_third_dbt_model - cloud]
 ```
 
 ## Running the project
