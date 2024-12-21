@@ -1,6 +1,6 @@
 # MotherDuck Dual Execution example with dbt
 
-The objective of this project is to show a minimal example of dual execution in Motherduck with dbt. The basic premise is `dbt init` with one additional model and a simple `dev` profile in the `profiles.yml` file. By using `attach`, we can add a second database in the execution context of that database and write it to a physical file.
+The objective of this project is to show a minimal example of dual execution in MotherDuck with dbt. The basic premise is `dbt init` with one additional model and a simple `dev` profile in the `profiles.yml` file. By using `attach`, we can add a second database in the execution context of DuckDB and write it to a physical file.
 
 ## Example Profiles.yml
 
@@ -28,11 +28,15 @@ In order to use the local model, we need to use the `database` parameter in the 
 
 ## Data flow
 
-In this example, data flow from:
+In this example, data flows from:
 
 ```mermaid
 graph TD
     A[my_first_dbt_model] -->|cloud to local| B[my_second_dbt_model]
     B -->|local to cloud| C[my_third_dbt_model]
 ```
+
+## Running the project
+
+Install `dbt-duckdb` and run `dbt build`. Your browser will prompt you for MotherDuck authentication unless you have token authentication configured in your shell.
 
