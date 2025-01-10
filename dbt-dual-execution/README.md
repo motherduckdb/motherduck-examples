@@ -37,6 +37,5 @@ graph LR
 ```
 
 ## Running the project
-
-Install `dbt-duckdb` and run `dbt build`. Your browser will prompt you for MotherDuck authentication unless you have token authentication configured in your shell.
+Run `uv sync` and then ` uv run dbt build`. Your browser will prompt you for MotherDuck authentication unless you have token authentication configured in your shell.
 

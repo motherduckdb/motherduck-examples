@@ -5,4 +5,5 @@ dual_execution:
       path: "md:my_db"
       attach:
         - path: local.db
+          alias: some_db
   target: dev
