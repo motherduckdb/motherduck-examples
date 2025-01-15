@@ -1,9 +1,11 @@
 dual_execution:
   outputs:
-    dev:
+    local:
       type: duckdb
-      path: "md:my_db"
+      path: local.db 
       attach:
-        - path: local.db
-          alias: some_db
-  target: dev
+        - path: "md:"	# attaches all MotherDuck databases
+    prod:
+      type: duckdb
+      path: "md:"
+  target: local
