@@ -1,5 +1,5 @@
 {{ config(
-    database="local",
+    database="some_db",
     materialized="table"
 ) }}
 
