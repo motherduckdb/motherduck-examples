@@ -1,0 +1,5 @@
+transform/*.cache/*
+transform/logs/*
+transform/macros/__pycache__/*
+.dlt/*
+.venv/*

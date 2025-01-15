@@ -1,0 +1,11 @@
+{
+    "python.terminal.activateEnvironment": true,
+    "terminal.integrated.defaultProfile.osx": "bash",
+    "terminal.integrated.profiles.osx": {
+        "bash": {
+            "path": "bash",
+            "args": ["-l"],
+            "overrideName": true
+        }
+    }
+}
