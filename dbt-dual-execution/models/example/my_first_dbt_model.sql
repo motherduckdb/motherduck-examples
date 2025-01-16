@@ -7,7 +7,10 @@
     Try changing "table" to "view" below
 */
 
-{{ config(materialized='table') }}
+{{ config(
+    database="my_db",
+    materialized="table"
+) }}
 
 with source_data as (
 
