@@ -35,4 +35,9 @@ models:
     example:
       +materialized: view
     tpcds:
-      +materialized: table
+      raw:
+        +tags: ['raw']
+        +materialized: table
+      queries:
+        +materialized: view
+        +tags: ['queries'] 
