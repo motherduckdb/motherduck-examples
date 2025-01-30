@@ -1,0 +1,8 @@
+{
+    "name": "Python 3",
+    // Use a Dockerfile to define the dev container
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": "."
+    },
+}
