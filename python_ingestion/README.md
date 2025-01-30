@@ -10,7 +10,7 @@ There are two scripts to demonstrate how to ingest data with Python to MotherDuc
 - Python 3.12
 - Docker (optional, for devcontainer)
 - uv (Package manager for Python)
-- [`motherduck_token`](https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/authenticating-to-motherduck/#creating-an-access-token) to connect to MotherDuck
+- [`motherduck_token`](https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/authenticating-to-motherduck/#creating-an-access-token) to connect to MotherDuck. Rename the `.env.template` file to `.env` and add your token.
 
 ## Commands
 You can use the Makefile to run the scripts. Here are the commands:
