@@ -40,6 +40,20 @@ SELECT * EXCLUDE("Unit size"),
       cast(
         replace(replace("Offer price", '$', ''), ',', '') as decimal(10, 2)
     ) as offer_price,
-  offer_price /(qty*volume_cl) * 75 as price_per_bottle
+  offer_price /(qty*volume_cl) * 75 as price_per_75cl,
+  offer_price / qty as price_per_bottle
 FROM winelist
 WHERE vintage > 1000;
+
+-- exercise
+with cte_cheap_but_good as (select * from winelist_clean
+where Vintage >= 1990 AND ("WA score" IS NOT NULL OR "Vinous score" IS NOT NULL)
+  order by coalesce(coalesce("WA score","Vinous score"),-1) desc, price_per_bottle
+limit 1),
+  cte_expensive_and_bad as (
+select * from winelist_clean
+where Vintage >= 1990 and ("WA score" IS NOT NULL OR "Vinous score" IS NOT NULL)
+  order by coalesce(coalesce("WA score","Vinous score"),-1) asc, price_per_bottle desc
+limit 1)
+select a.price_per_bottle - b.price_per_bottle as difference from cte_cheap_but_good a
+join cte_expensive_and_bad b on true
