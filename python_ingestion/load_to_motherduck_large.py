@@ -45,60 +45,58 @@ class ArrowTableLoadingBuffer:
         self.conn.unregister("buffer_table")
 
 
-
 def fetch_github_data():
-    url = 'https://api.github.com/repos/duckdb/duckdb/stats/contributors'
+    url = "https://api.github.com/repos/duckdb/duckdb/stats/contributors"
     logger.info(f"Fetching data from {url}")
     response = requests.get(url)
     response.raise_for_status()
     logger.info("Data fetched successfully")
     return response.json()
 
+
 def process_data(data):
     logger.info("Processing data")
     records = []
     for author in data:
-        total_commits = sum(week['c'] for week in author['weeks'])
-        records.append({
-            'login': author['author']['login'],
-            'total_commits': total_commits
-        })
-    schema = pa.schema([
-        ('login', pa.string()),
-        ('total_commits', pa.int64())
-    ])
+        total_commits = sum(week["c"] for week in author["weeks"])
+        records.append(
+            {"login": author["author"]["login"], "total_commits": total_commits}
+        )
+    schema = pa.schema([("login", pa.string()), ("total_commits", pa.int64())])
     table = pa.Table.from_pylist(records, schema=schema)
     logger.info("Data processed into Arrow Table")
     return table
+
 
 def main():
     logger.info("Starting main process")
     data = fetch_github_data()
     table = process_data(data)
-    
+
     # Connect to MotherDuck and create a table
     con = duckdb.connect()
     logger.info("Connecting to MotherDuck")
     con.execute("ATTACH 'md:'")
     con.execute("CREATE DATABASE IF NOT EXISTS github")
-    
+
     con.execute("""
         CREATE TABLE IF NOT EXISTS github.github_commits_large (
             login VARCHAR,
             total_commits BIGINT
         )
     """)
-    
+
     # Insert data using ArrowTableLoadingBuffer
     buffer = ArrowTableLoadingBuffer(
         conn=con,
         pyarrow_schema=table.schema,
         table_name="github.github_commits_large",
-        chunk_size=10  # Small chunk size for demonstration
+        chunk_size=10,  # Small chunk size for demonstration
     )
     buffer.insert(table)
 
     logger.info("Data loaded into MotherDuck successfully")
+
 
 if __name__ == "__main__":
     main()

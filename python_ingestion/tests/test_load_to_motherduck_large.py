@@ -34,7 +34,9 @@ def test_insert_and_query(buffer_factory):
     assert total_rows == 4, f"Expected 4 total rows, but found {total_rows}"
 
     # Verify that all data was inserted correctly
-    result = buffer.conn.execute("SELECT id, name FROM test_table ORDER BY id").fetchall()
+    result = buffer.conn.execute(
+        "SELECT id, name FROM test_table ORDER BY id"
+    ).fetchall()
     expected = [(1, "Alice"), (2, "Bob"), (3, "Charlie"), (4, "David")]
     assert result == expected, "Data in the table does not match expected values"
 
@@ -62,7 +64,9 @@ def test_insert_chunks(buffer_factory):
     assert total_rows == 4, f"Expected 4 total rows, but found {total_rows}"
 
     # Verify that all data was inserted correctly
-    result = buffer.conn.execute("SELECT id, name FROM test_table ORDER BY id").fetchall()
+    result = buffer.conn.execute(
+        "SELECT id, name FROM test_table ORDER BY id"
+    ).fetchall()
     expected = [(1, "Alice"), (2, "Bob"), (3, "Charlie"), (4, "David")]
     assert result == expected, "Data in the table does not match expected values"
 
@@ -94,4 +98,3 @@ def test_insert_large_table(buffer_factory):
         100,
         "Name_100",
     ), f"Last row does not match expected: {last_row}"
-
