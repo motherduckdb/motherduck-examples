@@ -45,6 +45,10 @@ Now we can query our previously created winelist:
 select * from pg.public.winelist;
 ```
 
+### Exercise
+
+Use Create table as select (CTAS) to replicate data from pg into duckdb.
+
 ## Using pg_duckdb
 
 First we need to jump into the pg_duckdb container:
@@ -67,3 +71,7 @@ And then we can query our previously created winelist:
 select *
 from public.winelist;
 ```
+
+### Exercise
+
+Again we will use CTAS, this time to replicate data from MotherDuck into Postgres. Then, write a hybrid query that uses data in both postgres & motherduck together.
