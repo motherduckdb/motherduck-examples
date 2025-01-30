@@ -1,5 +1,5 @@
 -- import sample data set
-CREATE OR REPLACE TABLE winelist AS SELECT * FROM read_csv_auto(['sample_data.csv']);
+CREATE OR REPLACE TABLE winelist AS SELECT * FROM read_csv_auto(['winelist_sample.csv']);
 
 -- load a summary of the data
 SUMMARIZE winelist;
