@@ -1,6 +1,3 @@
-import duckdb
-import pyarrow as pa
-
 import requests
 import pyarrow as pa
 import duckdb
