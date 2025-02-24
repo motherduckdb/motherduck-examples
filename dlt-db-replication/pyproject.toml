@@ -1,0 +1,12 @@
+[project]
+name = "dlt-db-replication"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "dlt[motherduck]>=1.7.0",
+    "humanize>=4.12.1",
+    "psycopg2-binary>=2.9.10",
+    "sqlalchemy>=2.0.38",
+]
