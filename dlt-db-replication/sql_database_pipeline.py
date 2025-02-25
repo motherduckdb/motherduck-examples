@@ -345,9 +345,28 @@ def load_entire_database() -> None:
 #     print(info)
 
 
+def use_config_tables() -> None:
+    """Load tables specified in .dlt/config.toml into MotherDuck using replace mode."""
+    pipeline = dlt.pipeline(pipeline_name="pg2md", destination='motherduck', dataset_name="pg2md_data")
+    
+    # Get the list of tables from the configuration
+    tables = dlt.config.get("sources.sql_database.tables")
+    
+    if not tables:
+        raise ValueError("No tables configured in .dlt/config.toml under [sources.sql_database.tables]")
+    
+    # Create the source with the configured tables
+    source = sql_database(backend="connectorx", backend_kwargs={"return_type": "arrow"}).with_resources(*tables)
+    
+    # Run the pipeline in replace mode
+    info = pipeline.run(source, write_disposition="replace")
+    print(info)
+
+
 if __name__ == "__main__":
     # Load selected tables with different settings
-    load_select_tables_from_database()
+    #load_select_tables_from_database()
+    use_config_tables()
 
     # load a table and select columns
     # select_columns()
