@@ -1,7 +1,7 @@
 # put your configuration values here
 
 [runtime]
-log_level = "INFO"  # Options: "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+log_level = "WARNING"  # Options: "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
 # use the dlthub_telemetry setting to enable/disable anonymous usage data reporting, see https://dlthub.com/docs/reference/telemetry
 dlthub_telemetry = true
 
@@ -33,13 +33,26 @@ tables = [
     "web_sales",
     "web_site"
 ]
-workers = 4         # Number of parallel workers for PostgreSQL extraction
+table = [
+    "call_center"
+]
+
+workers = 6         # Number of parallel workers for PostgreSQL extraction
 
 [postgres]
-pool_size = 4  # Match the number of workers
+pool_size = 6  # Match the number of workers
 
 [data_writer]
 format = "parquet"  # Use Parquet for interim storage
 
 [destination.motherduck]
 batch_size = 1000000  # Number of rows per batch for MotherDuck loading
+
+[extract]
+workers=8
+
+[normalize]
+workers=4
+
+[load]
+workers=4
