@@ -1,16 +1,12 @@
 # flake8: noqa
-# Import necessary libraries
-import humanize  # Used for human-readable time formatting
-from datetime import timedelta
-
 # Import the DLT (Data Loading Tool) library
 import dlt
 
 # Import the SQL database source from DLT
 from dlt.sources.sql_database import sql_database
 
-# Import the pipeline metrics printing function
-from timing_logs import print_pipeline_metrics
+# Import the pipeline metrics printing function and logger configuration
+from timing_logs import print_pipeline_metrics, configure_logger
 
 
 def use_config_tables() -> None:
@@ -22,7 +18,7 @@ def use_config_tables() -> None:
     2. Retrieves table configuration from the DLT config file
     3. Sets up a SQL database source with those tables
     4. Executes the pipeline to extract, transform, and load the data
-    5. Prints detailed runtime metrics about the pipeline execution
+    5. Logs detailed runtime metrics about the pipeline execution
     
     Raises:
         ValueError: If no tables are configured in the configuration file
@@ -50,9 +46,12 @@ def use_config_tables() -> None:
     # Execute the pipeline with write_disposition="replace" which:
     # - Drops existing tables and recreates them (vs. append or merge strategies)
     # - Ensures a fresh copy of the data is loaded each time
-    info = pipeline.run(source, write_disposition="replace")
+    pipeline.run(source, write_disposition="replace")
 
     # more about write disposition: https://dlthub.com/docs/general-usage/incremental-loading
+    
+    # Configure the logger before printing pipeline metrics
+    configure_logger()
     
     # Print pipeline metrics using the imported function
     print_pipeline_metrics(pipeline)
