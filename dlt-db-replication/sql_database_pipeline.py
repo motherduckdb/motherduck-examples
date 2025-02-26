@@ -1,12 +1,16 @@
 # flake8: noqa
 # Import necessary libraries
 import humanize  # Used for human-readable time formatting
+from datetime import timedelta
 
 # Import the DLT (Data Loading Tool) library
 import dlt
 
 # Import the SQL database source from DLT
 from dlt.sources.sql_database import sql_database
+
+# Import the pipeline metrics printing function
+from timing_logs import print_pipeline_metrics
 
 
 def use_config_tables() -> None:
@@ -47,23 +51,11 @@ def use_config_tables() -> None:
     # - Drops existing tables and recreates them (vs. append or merge strategies)
     # - Ensures a fresh copy of the data is loaded each time
     info = pipeline.run(source, write_disposition="replace")
+
+    # more about write disposition: https://dlthub.com/docs/general-usage/incremental-loading
     
-    # Print detailed metrics about the pipeline execution
-    print('*****RUNTIME INFO*****')
-    # Format the total runtime in a human-readable format (e.g., "2 minutes, 5 seconds")
-    print(humanize.precisedelta(pipeline.last_trace.finished_at - pipeline.last_trace.started_at))
-    
-    print('*****EXTRACT INFO*****')
-    # Display metrics about the extraction phase (e.g., rows extracted, processing time)
-    print(pipeline.last_trace.last_extract_info)
-    
-    print('*****NORMALIZE INFO***** ')
-    # Display metrics about the normalization phase (e.g., data type mappings, transformations)
-    print(pipeline.last_trace.last_normalize_info)
-    
-    print('*****LOAD INFO*****')
-    # Display metrics about the loading phase (e.g., rows loaded, tables created)
-    print(pipeline.last_trace.last_load_info)
+    # Print pipeline metrics using the imported function
+    print_pipeline_metrics(pipeline)
 
 
 # Script entry point - executes the function when the script is run directly

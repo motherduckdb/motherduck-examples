@@ -74,14 +74,14 @@ table = [
 
 # Number of parallel workers for PostgreSQL data extraction
 # Higher values can improve performance but may increase database load
-workers = 8
+workers = 6
 
 #------------------------------------------------------------------------------
 # PostgreSQL Connection Pool Configuration
 #------------------------------------------------------------------------------
 [postgres]
 # Connection pool size - should match the number of workers for optimal performance
-pool_size = 8
+pool_size = 6
 
 #------------------------------------------------------------------------------
 # Data Writer Configuration
