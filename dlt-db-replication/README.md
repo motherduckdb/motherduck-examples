@@ -30,7 +30,7 @@ The project requires the following Python packages:
 
 ## 🚀 Setup
 
-### 1. Create a Virtual Environment with uv
+### 1. Using uv (Recommended)
 
 [uv](https://github.com/astral-sh/uv) is a modern Python package installer and resolver built in Rust, designed to be significantly faster than traditional tools.
 
@@ -44,21 +44,34 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 pip install uv
 ```
 
-Create a virtual environment:
+The simplest way to run the pipeline is with:
 
 ```bash
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# This will handle environment creation, dependency installation and execution in one step
+uv run sql_database_pipeline.py
 ```
 
-### 2. Install Dependencies with uv
+Alternatively, if you want to sync dependencies first:
 
 ```bash
-# Install project dependencies
-uv pip install -e .
+# Install project dependencies from pyproject.toml
+uv sync
 
-# Or directly from pyproject.toml
-uv pip sync
+# Then run the pipeline
+python sql_database_pipeline.py
+```
+
+### 2. Traditional Setup (Alternative)
+
+If you prefer the traditional approach:
+
+```bash
+# Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -e .
 ```
 
 ### 3. Configure Credentials
@@ -100,6 +113,10 @@ Set parallelization levels for each pipeline stage (extract, normalize, load).
 Run the pipeline with:
 
 ```bash
+# If using uv
+uv run sql_database_pipeline.py
+
+# Or if using traditional setup with activated environment
 python sql_database_pipeline.py
 ```
 
