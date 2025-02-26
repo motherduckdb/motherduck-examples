@@ -1,0 +1,118 @@
+################################################################################
+# DLT (Data Loading Tool) Configuration File
+#
+# This configuration file controls the behavior of the database replication
+# pipeline from PostgreSQL to MotherDuck.
+################################################################################
+
+#------------------------------------------------------------------------------
+# Runtime Configuration
+#------------------------------------------------------------------------------
+[runtime]
+# Control the verbosity of log messages
+# Options: "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+log_level = "WARNING"  
+
+# Enable/disable anonymous usage data reporting to DLT Hub
+# See https://dlthub.com/docs/reference/telemetry for details
+dlthub_telemetry = true
+
+#------------------------------------------------------------------------------
+# Source Configuration (PostgreSQL Database)
+#------------------------------------------------------------------------------
+[sources.sql_database]
+# Schema name in the source PostgreSQL database
+schema = "my_pg"
+
+# List of tables to be replicated from PostgreSQL to MotherDuck
+# These tables will be extracted in parallel according to the workers setting
+tables = [
+    # Customer-related tables
+    "customer",
+    "customer_address",
+    "customer_demographics",
+    "household_demographics",
+    "income_band",
+    
+    # Time-related tables
+    "date_dim",
+    "time_dim",
+    
+    # Product-related tables
+    "item",
+    "inventory",
+    "warehouse",
+    
+    # Sales and returns tables
+    "store_sales",
+    "store_returns",
+    "catalog_sales",
+    "catalog_returns",
+    "web_sales",
+    "web_returns",
+    
+    # Store and catalog tables
+    "store",
+    "call_center",
+    "catalog_page",
+    
+    # Web-related tables
+    "web_page",
+    "web_site",
+    
+    # Other dimension tables
+    "promotion",
+    "reason",
+    "ship_mode"
+]
+
+# Deprecated or test configuration - can be removed
+# Use 'tables' configuration instead
+table = [
+    "call_center"
+]
+
+# Number of parallel workers for PostgreSQL data extraction
+# Higher values can improve performance but may increase database load
+workers = 6
+
+#------------------------------------------------------------------------------
+# PostgreSQL Connection Pool Configuration
+#------------------------------------------------------------------------------
+[postgres]
+# Connection pool size - should match the number of workers for optimal performance
+pool_size = 6
+
+#------------------------------------------------------------------------------
+# Data Writer Configuration
+#------------------------------------------------------------------------------
+[data_writer]
+# Format for interim data storage before loading to MotherDuck
+# Parquet provides good compression and performance
+format = "parquet"
+
+#------------------------------------------------------------------------------
+# MotherDuck Destination Configuration
+#------------------------------------------------------------------------------
+[destination.motherduck]
+# Number of rows to include in each batch when loading to MotherDuck
+# Larger batch sizes improve performance but require more memory
+batch_size = 1000000
+
+#------------------------------------------------------------------------------
+# Pipeline Stage Parallelization
+#------------------------------------------------------------------------------
+# Extract stage configuration
+[extract]
+# Number of parallel workers for the extract phase
+workers = 8
+
+# Normalize stage configuration (data transformation)
+[normalize]
+# Number of parallel workers for the normalize phase
+workers = 4
+
+# Load stage configuration (loading to MotherDuck)
+[load]
+# Number of parallel workers for the load phase
+workers = 4
