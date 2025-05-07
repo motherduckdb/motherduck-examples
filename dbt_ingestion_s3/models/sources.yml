@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: hn_external
+    meta:
+      external_location: "s3://us-prd-motherduck-open-datasets/hacker_news/parquet/{name}.parquet"
+    tables:
+      - name: hacker_news_2024_2025 

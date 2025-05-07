@@ -1,5 +1,5 @@
 [project]
-name = "dbt-dual-execution"
+name = "dbt-ingestion-s3"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"

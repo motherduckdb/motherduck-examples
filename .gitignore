@@ -3,3 +3,5 @@
 __pycache__/
 *.py[cod]
 *$py.class
+dbt_ingestion_s3/*.duckdb
+dbt_ingestion_s3/local.db

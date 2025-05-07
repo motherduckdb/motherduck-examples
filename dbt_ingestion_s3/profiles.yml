@@ -1,0 +1,11 @@
+dbt_ingestion_s3:
+  outputs:
+    local:
+      type: duckdb
+      path: local.db 
+      threads: 1
+    prod:
+      type: duckdb
+      path: "md:hacker_news_stats"
+      threads: 1
+  target: local

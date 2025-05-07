@@ -1,5 +1,6 @@
 FROM mcr.microsoft.com/devcontainers/python:1-3.12-bullseye 
 
+ARG DUCKDB_VERSION=1.2.2
 # Install Node.js
 ARG INSTALL_NODE="true"
 ARG NODE_VERSION="lts/*"
@@ -9,14 +10,14 @@ RUN apt-get install -y gcc musl-dev unzip
 ENV PYTHONUNBUFFERED 1
 
 # Install UV via pip
-RUN pip install uv==0.5.25 --no-cache-dir
+RUN pip install uv==0.7.2 --no-cache-dir
 
 # Install DuckDB CLI based on architecture
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "aarch64" ]; then \
-        curl -L -o duckdb_cli.zip https://github.com/duckdb/duckdb/releases/download/v1.1.3/duckdb_cli-linux-aarch64.zip; \
+        curl -L -o duckdb_cli.zip https://github.com/duckdb/duckdb/releases/download/v${DUCKDB_VERSION}/duckdb_cli-linux-aarch64.zip; \
     elif [ "$ARCH" = "x86_64" ]; then \
-        curl -L -o duckdb_cli.zip https://github.com/duckdb/duckdb/releases/download/v1.1.3/duckdb_cli-linux-amd64.zip; \
+        curl -L -o duckdb_cli.zip https://github.com/duckdb/duckdb/releases/download/v${DUCKDB_VERSION}/duckdb_cli-linux-amd64.zip; \
     else \
         echo "Unsupported architecture: $ARCH" && exit 1; \
     fi && \
