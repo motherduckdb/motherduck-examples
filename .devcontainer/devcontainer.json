@@ -7,6 +7,6 @@
     },
      "features": {
         //see https://github.com/devcontainers/features/tree/main/src/docker-in-docker for details on below
-        "ghcr.io/devcontainers/features/docker-in-docker:1":{},
+        "ghcr.io/devcontainers/features/docker-in-docker:2.12.2":{},
      },
 }
