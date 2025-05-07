@@ -9,7 +9,7 @@ RUN apt-get install -y gcc musl-dev unzip
 ENV PYTHONUNBUFFERED 1
 
 # Install UV via pip
-RUN pip install uv==0.5.25 --no-cache-dir
+RUN pip install uv==0.7.2 --no-cache-dir
 
 # Install DuckDB CLI based on architecture
 RUN ARCH=$(uname -m) && \
