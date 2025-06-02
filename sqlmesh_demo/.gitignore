@@ -3,3 +3,5 @@ transform/logs/*
 transform/macros/__pycache__/*
 .dlt/*
 .venv/*
+logs/*
+.DS_Store

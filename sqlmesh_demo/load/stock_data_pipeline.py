@@ -116,7 +116,6 @@ def stock_history_resource() -> Iterator[Dict[str, Any]]:
                         'High': float(row['High'].iloc[0]) if isinstance(row['High'], pd.Series) else float(row['High']),
                         'Low': float(row['Low'].iloc[0]) if isinstance(row['Low'], pd.Series) else float(row['Low']),
                         'Close': float(row['Close'].iloc[0]) if isinstance(row['Close'], pd.Series) else float(row['Close']),
-                        'Adj Close': float(row['Adj Close'].iloc[0]) if isinstance(row['Adj Close'], pd.Series) else float(row['Adj Close']),
                         'Volume': int(row['Volume'].iloc[0]) if isinstance(row['Volume'], pd.Series) else int(row['Volume']),
                         'Symbol': symbol
                     }
