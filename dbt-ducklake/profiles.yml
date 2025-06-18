@@ -1,0 +1,13 @@
+dual_execution:
+  outputs:
+    local:
+      type: duckdb
+      path: local.db 
+      attach:
+        - path: "md:"	# attaches all MotherDuck databases
+      threads: 4
+    prod:
+      type: duckdb
+      path: "md:jdw_dev"
+      threads: 4
+  target: local
