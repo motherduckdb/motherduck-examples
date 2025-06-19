@@ -2,6 +2,9 @@ sources:
   - name: tpc-ds
     database: jdw_dev
     schema: jdw_tpcds
+    meta:
+      external_location: |- 
+        s3://devrel-test-data/tpcds/sf100/{name}.parquet
     tables:
       - name: call_center
       - name: catalog_page

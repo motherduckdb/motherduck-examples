@@ -1,9 +1,10 @@
 [project]
-name = "dbt-dual-execution"
+name = "dbt-ducklake"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "dbt-duckdb==1.9.3",
+    "dbt-core==1.9.6"
 ]

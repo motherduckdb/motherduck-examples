@@ -1,13 +1,16 @@
 dual_execution:
   outputs:
-    local:
+    ducklake:
+      ## to use create your own database in MotherDuck first
+      ## CREATE DATABASE jdw_ducklake 
+      ##    (TYPE ducklake, DATA_PATH 's3://...')
       type: duckdb
-      path: local.db 
-      attach:
-        - path: "md:"	# attaches all MotherDuck databases
-      threads: 4
-    prod:
+      path: 'md:jdw_ducklake'
+      threads: 1
+
+    dev:
       type: duckdb
-      path: "md:jdw_dev"
-      threads: 4
-  target: local
+      path: 'md:jdw_dev'
+      threads: 1
+
+  target: ducklake

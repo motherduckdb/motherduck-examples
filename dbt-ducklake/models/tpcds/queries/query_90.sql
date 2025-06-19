@@ -19,7 +19,7 @@ from
             and {{ ref("time_dim") }}.t_hour between 8 and 8 + 1
             and {{ ref("household_demographics") }}.hd_dep_count = 6
             and {{ ref("web_page") }}.wp_char_count between 5000 and 5200
-    ) at,
+    ) as "at",
     (
         select count(*) pmc
         from
