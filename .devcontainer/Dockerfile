@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/devcontainers/python:1-3.12-bullseye 
 
-ARG DUCKDB_VERSION=1.2.2
+ARG DUCKDB_VERSION=1.3.1
 # Install Node.js
 ARG INSTALL_NODE="true"
 ARG NODE_VERSION="lts/*"
@@ -10,7 +10,7 @@ RUN apt-get install -y gcc musl-dev unzip
 ENV PYTHONUNBUFFERED 1
 
 # Install UV via pip
-RUN pip install uv==0.7.2 --no-cache-dir
+RUN pip install uv==0.7.15 --no-cache-dir
 
 # Install DuckDB CLI based on architecture
 RUN ARCH=$(uname -m) && \
