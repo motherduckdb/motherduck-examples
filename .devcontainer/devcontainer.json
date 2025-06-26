@@ -7,13 +7,13 @@
     },
      "features": {
         //see https://github.com/devcontainers/features/tree/main/src/docker-in-docker for details on below
-        "ghcr.io/devcontainers/features/docker-in-docker:2.12.2":{},
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {
+            "version": "latest",
+            "disableIp6tables": true
+        }
      },
     "containerEnv": {
         "motherduck_token": "${localEnv:motherduck_token}"
-    },
-    "runArgs": [
-        // Disable IPv6 for Docker Desktop > 4.30 https://github.com/docker/for-mac/issues/7276#issuecomment-2615249765
-        "--sysctl", "net.ipv6.conf.all.disable_ipv6=1"
-    ]
+    }
+    // Removed runArgs as it's incompatible with GitHub Codespaces
 }
