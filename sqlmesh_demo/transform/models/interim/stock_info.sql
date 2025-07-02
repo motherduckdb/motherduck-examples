@@ -2,7 +2,8 @@ MODEL (
   name interim.stock_info,
   kind SCD_TYPE_2_BY_TIME (
     unique_key symbol,
-    updated_at_name _dlt_load_time
+    updated_at_name _dlt_load_time,
+    on_destructive_change 'warn'
   ),
   grain (
     symbol
@@ -109,13 +110,13 @@ SELECT
   exchange::TEXT AS exchange,
   quote_type::TEXT AS quote_type,
   symbol::TEXT AS symbol,
-  underlying_symbol::TEXT AS underlying_symbol,
+ -- underlying_symbol::TEXT AS underlying_symbol,
   short_name::TEXT AS short_name,
   long_name::TEXT AS long_name,
-  first_trade_date_epoch_utc::BIGINT AS first_trade_date_epoch_utc,
-  time_zone_full_name::TEXT AS time_zone_full_name,
-  time_zone_short_name::TEXT AS time_zone_short_name,
-  uuid::TEXT AS uuid,
+  --first_trade_date_epoch_utc::BIGINT AS first_trade_date_epoch_utc,
+--  time_zone_full_name::TEXT AS time_zone_full_name,
+ -- time_zone_short_name::TEXT AS time_zone_short_name,
+ -- uuid::TEXT AS uuid,
   message_board_id::TEXT AS message_board_id,
   gmt_off_set_milliseconds::BIGINT AS gmt_off_set_milliseconds,
   current_price::DOUBLE AS current_price,

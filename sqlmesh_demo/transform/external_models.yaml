@@ -1,23 +1,24 @@
-- name: '"dlt_test_db"."stock_data"."_dlt_loads"'
+- name: '"jdw_ducklake"."stock_data"."_dlt_loads"'
   columns:
     load_id: TEXT
     schema_name: TEXT
     status: BIGINT
     inserted_at: TIMESTAMPTZ
     schema_version_hash: TEXT
-- name: '"dlt_test_db"."stock_data"."stock_history"'
+  gateway: md
+- name: '"jdw_ducklake"."stock_data"."stock_history"'
   columns:
     date: TEXT
     open: DOUBLE
     high: DOUBLE
     low: DOUBLE
     close: DOUBLE
-    adj_close: DOUBLE
     volume: BIGINT
     symbol: TEXT
     _dlt_load_id: TEXT
     _dlt_id: TEXT
-- name: '"dlt_test_db"."stock_data"."stock_info"'
+  gateway: md
+- name: '"jdw_ducklake"."stock_data"."stock_info"'
   columns:
     address1: TEXT
     city: TEXT
@@ -78,6 +79,7 @@
     trailing_annual_dividend_rate: DOUBLE
     trailing_annual_dividend_yield: DOUBLE
     currency: TEXT
+    tradeable: BOOLEAN
     enterprise_value: BIGINT
     profit_margins: DOUBLE
     float_shares: BIGINT
@@ -109,18 +111,7 @@
     sand_p52_week_change: DOUBLE
     last_dividend_value: DOUBLE
     last_dividend_date: BIGINT
-    exchange: TEXT
     quote_type: TEXT
-    symbol: TEXT
-    underlying_symbol: TEXT
-    short_name: TEXT
-    long_name: TEXT
-    first_trade_date_epoch_utc: BIGINT
-    time_zone_full_name: TEXT
-    time_zone_short_name: TEXT
-    uuid: TEXT
-    message_board_id: TEXT
-    gmt_off_set_milliseconds: BIGINT
     current_price: DOUBLE
     target_high_price: DOUBLE
     target_low_price: DOUBLE
@@ -140,6 +131,7 @@
     revenue_per_share: DOUBLE
     return_on_assets: DOUBLE
     return_on_equity: DOUBLE
+    gross_profits: BIGINT
     free_cashflow: BIGINT
     operating_cashflow: BIGINT
     earnings_growth: DOUBLE
@@ -148,11 +140,68 @@
     ebitda_margins: DOUBLE
     operating_margins: DOUBLE
     financial_currency: TEXT
+    symbol: TEXT
+    language: TEXT
+    region: TEXT
+    type_disp: TEXT
+    quote_source_name: TEXT
+    triggerable: BOOLEAN
+    custom_price_alert_confidence: TEXT
+    market_state: TEXT
+    has_pre_post_market_data: BOOLEAN
+    first_trade_date_milliseconds: BIGINT
+    post_market_change_percent: DOUBLE
+    post_market_price: DOUBLE
+    post_market_change: DOUBLE
+    regular_market_change: DOUBLE
+    regular_market_day_range: TEXT
+    full_exchange_name: TEXT
+    average_daily_volume3_month: BIGINT
+    fifty_two_week_low_change: DOUBLE
+    fifty_two_week_low_change_percent: DOUBLE
+    fifty_two_week_range: TEXT
+    fifty_two_week_high_change: DOUBLE
+    fifty_two_week_high_change_percent: DOUBLE
+    fifty_two_week_change_percent: DOUBLE
+    dividend_date: BIGINT
+    earnings_timestamp: BIGINT
+    earnings_timestamp_start: BIGINT
+    earnings_timestamp_end: BIGINT
+    earnings_call_timestamp_start: BIGINT
+    earnings_call_timestamp_end: BIGINT
+    is_earnings_date_estimate: BOOLEAN
+    eps_trailing_twelve_months: DOUBLE
+    eps_forward: DOUBLE
+    eps_current_year: DOUBLE
+    price_eps_current_year: DOUBLE
+    fifty_day_average_change: DOUBLE
+    fifty_day_average_change_percent: DOUBLE
+    two_hundred_day_average_change: DOUBLE
+    two_hundred_day_average_change_percent: DOUBLE
+    source_interval: BIGINT
+    exchange_data_delayed_by: BIGINT
+    short_name: TEXT
+    post_market_time: BIGINT
+    regular_market_time: BIGINT
+    exchange: TEXT
+    message_board_id: TEXT
+    exchange_timezone_name: TEXT
+    exchange_timezone_short_name: TEXT
+    gmt_off_set_milliseconds: BIGINT
+    market: TEXT
+    esg_populated: BOOLEAN
+    average_analyst_rating: TEXT
+    crypto_tradeable: BOOLEAN
+    regular_market_change_percent: DOUBLE
+    regular_market_price: DOUBLE
+    long_name: TEXT
+    display_name: TEXT
     trailing_peg_ratio: DOUBLE
     _dlt_load_id: TEXT
     _dlt_id: TEXT
-    address2: TEXT
-- name: '"dlt_test_db"."stock_data"."stock_info__company_officers"'
+    ipo_expected_date: TEXT
+  gateway: md
+- name: '"jdw_ducklake"."stock_data"."stock_info__company_officers"'
   columns:
     max_age: BIGINT
     name: TEXT
@@ -166,7 +215,8 @@
     _dlt_parent_id: TEXT
     _dlt_list_idx: BIGINT
     _dlt_id: TEXT
-- name: '"dlt_test_db"."stock_data"."stock_options"'
+  gateway: md
+- name: '"jdw_ducklake"."stock_data"."stock_options"'
   columns:
     contract_symbol: TEXT
     last_trade_date: TIMESTAMPTZ
@@ -176,6 +226,7 @@
     ask: DOUBLE
     change: DOUBLE
     percent_change: DOUBLE
+    volume: DOUBLE
     open_interest: BIGINT
     implied_volatility: DOUBLE
     in_the_money: BOOLEAN
@@ -186,4 +237,4 @@
     symbol: TEXT
     _dlt_load_id: TEXT
     _dlt_id: TEXT
-    volume: DOUBLE
+  gateway: md

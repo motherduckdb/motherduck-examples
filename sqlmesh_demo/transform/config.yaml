@@ -1,10 +1,10 @@
 gateways:
-  local:
+  md:
     connection:
       type: motherduck
-      database: dlt_test_db
+      database: jdw_ducklake
 
-default_gateway: local
+default_gateway: md
 
 model_defaults:
   dialect: duckdb
