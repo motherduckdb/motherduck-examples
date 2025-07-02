@@ -1,6 +1,4 @@
 {{ config(
-    database="jdw_dev",
-    schema="jdw_tpcds",
     materialized="table"
 ) }}
 
