@@ -94,16 +94,25 @@ End result: your MotherDuck Duck Lake mirrors the local catalog and points at th
 ```mermaid
 flowchart LR
   subgraph MD[MotherDuck]
-    A[Duck Lake: my_md_ducklake] -- metadata --> Ameta[__ducklake_metadata_my_md_ducklake]
+    A[Managed Duck Lake] -- metadata --> Ameta[__ducklake_metadata_my_md_ducklake]
   end
 
   subgraph Local
-    B[Duck Lake: my_ducklake - Postgres] -- metadata --> Bmeta[__ducklake_metadata_my_ducklake - PG]
-    C[local_duckdb__ducklake_metadata_*.duckdb]
+    B[Local Duck Lake] -- metadata --> Bmeta[__ducklake_metadata_my_ducklake]
+  end
+
+  subgraph "Metadata Replica"
+    C[Copy of Duck Lake metadata]
+  end
+
+  subgraph "Object Storage"
+    D[Parquet Files]
   end
 
   Ameta <--> C
   Bmeta <--> C
+  D <--> A
+  D <--> B
 ```
 
 ## Configure to your taste
