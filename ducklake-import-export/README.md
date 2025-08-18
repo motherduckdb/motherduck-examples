@@ -89,32 +89,6 @@ End result: your MotherDuck Duck Lake mirrors the local catalog and points at th
 - We move catalog metadata (schemas, table bindings), not data files. That’s why this is fast and low risk.
 - S3 credentials are stored as secrets and can be scoped to the exact `DATA_PATH` so the catalog only sees what it needs.
 
-### A tiny diagram
-
-```mermaid
-flowchart LR
-  subgraph MD[MotherDuck]
-    A[Managed Duck Lake] -- metadata --> Ameta[__ducklake_metadata_my_md_ducklake]
-  end
-
-  subgraph Local
-    B[Local Duck Lake] -- metadata --> Bmeta[__ducklake_metadata_my_ducklake]
-  end
-
-  subgraph "Metadata Replica"
-    C[Copy of Duck Lake metadata]
-  end
-
-  subgraph "Object Storage"
-    D[Parquet Files]
-  end
-
-  Ameta <--> C
-  Bmeta <--> C
-  D <--> A
-  D <--> B
-```
-
 ## Configure to your taste
 
 - Change names: edit `local_ducklake_name` and `md_ducklake_name` in the scripts.
