@@ -98,7 +98,7 @@ flowchart LR
   end
 
   subgraph Local
-    B[Duck Lake: my_ducklake (postgres)] -- metadata --> Bmeta[__ducklake_metadata_my_ducklake (PG)]
+    B[Duck Lake: my_ducklake - Postgres] -- metadata --> Bmeta[__ducklake_metadata_my_ducklake - PG]
     C[local_duckdb__ducklake_metadata_*.duckdb]
   end
 
@@ -123,9 +123,3 @@ flowchart LR
 ## Clean up
 
 - Local files created: `local_duckdb__ducklake_metadata_<name>.duckdb` (and `.wal`). Delete any time; scripts recreate them.
-
-## A quick word for the skeptics
-
-If you’re a data scientist wondering whether this is “real” or just quacking around: this workflow is intentionally small, fast, and practical. You keep the data where it already is (S3), and you move only the catalog. It’s the Small Data way — fewer moving parts, quicker iteration, less yak shaving. If that resonates, you’re in the right pond.
-
-
