@@ -18,12 +18,10 @@ Why this matters: Duck Lake cleanly separates metadata (schemas, tables, configu
 - A MotherDuck account and a DuckDB session that can connect to it (e.g., `MOTHERDUCK_TOKEN` set)
 - An S3 bucket and prefix that will be your Duck Lake `DATA_PATH`
 - Local Postgres (via Homebrew) or any reachable Postgres for the local catalog
-
-Install dependencies from this folder:
+- uv (Python package manager). From this folder, set up the environment with:
 
 ```bash
-python3.11 -m venv .venv && source .venv/bin/activate
-pip install -e .
+uv sync
 ```
 
 Environment variables (export these in your shell):
@@ -53,7 +51,7 @@ Both scripts default to `is_local_test = True`, which safely drops and recreates
 ## Quick start: Export (MotherDuck → local)
 
 ```bash
-python /Users/jacobmatson/code/motherduck-examples/ducklake-import-export/ducklake-export.py
+uv run ducklake-export.py
 ```
 
 What happens:
@@ -70,7 +68,7 @@ End result: your local Duck Lake mirrors MotherDuck’s catalog and points at th
 ## Quick start: Import (local → MotherDuck)
 
 ```bash
-python /Users/jacobmatson/code/motherduck-examples/ducklake-import-export/ducklake-import.py
+uv run ducklake-import.py
 ```
 
 What happens:
