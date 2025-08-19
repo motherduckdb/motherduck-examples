@@ -2,6 +2,10 @@ import duckdb
 import psycopg2
 import os
 import pandas  # noqa: F401
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # This script creates a Duck Lake in MotherDuck, exports its metadata to a local DuckDB file,
 # then loads that metadata into a local Postgres-backed Duck Lake which points to the same S3 data path.
@@ -27,7 +31,7 @@ def remove_if_exists(path: str) -> None:
     except FileNotFoundError:
         pass
     except Exception as e:
-        print(e)
+        logging.error(f"Error removing file {path}: {e}")
 
 
 def ensure_extensions(con: duckdb.DuckDBPyConnection) -> None:
@@ -129,7 +133,7 @@ def copy_metadata_tables_to_postgres(
     con.execute('BEGIN TRANSACTION')
     try:
         for schema_name, table_name in tables_to_copy:
-            print('schema, table', schema_name, table_name)
+            logging.info('Processing schema %s, table %s', schema_name, table_name)
             con.execute(f"truncate table {target_pg_alias}.{table_name}")
             con.execute(
                 f"""
@@ -137,11 +141,11 @@ def copy_metadata_tables_to_postgres(
                 from {source_local_meta_db_name}.{schema_name}.{table_name}
                 """
             )
-        print('COMMIT')
+        logging.info('COMMIT')
         con.execute('COMMIT')
     except Exception as e:
-        print(e)
-        print('ROLLBACK')
+        logging.error(e)
+        logging.info('ROLLBACK')
         con.execute('ROLLBACK')
 
 
@@ -159,7 +163,7 @@ def setup_local_postgres_catalog(pg_dbname: str) -> None:
             pg_cursor.execute(f"create database {pg_dbname}")
             _ = pg_cursor.fetchall()
     except Exception as e:
-        print(e)
+        logging.error(f"Error setting up Postgres catalog: {e}")
 
 
 if is_local_test:
@@ -198,7 +202,8 @@ if is_local_test:
             from 'https://blobs.duckdb.org/nl_stations.csv'
         """
     )
-    print(md_con.execute("from nl_train_stations limit 5").fetchall())
+    result = md_con.execute("from nl_train_stations limit 5").fetchall()
+    logging.info(f"Sample data from nl_train_stations: {result}")
 
 # 2) Export MD Duck Lake metadata to a local DuckDB file
 local_md_meta_db_name = f"local_duckdb__ducklake_metadata_{md_ducklake_name}"
@@ -272,14 +277,14 @@ if is_local_test:
     select_test_results = local_con.execute(
         "from nl_train_stations select count(*)"
     ).fetchall()
-    print(select_test_results)
+    logging.info(f"Count before insert: {select_test_results}")
 
-    _ = local_con.execute(
+   local_con.execute(
         "insert into nl_train_stations from nl_train_stations limit 1"
     )
     final_test_results = local_con.execute(
         "from nl_train_stations select count(*)"
     ).fetchall()
-    print(final_test_results)
+    logging.info(f"Count after insert: {final_test_results}")
 
 
