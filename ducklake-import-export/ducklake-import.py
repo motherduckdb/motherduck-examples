@@ -15,7 +15,6 @@
 import duckdb
 import psycopg2
 import os
-import pandas  # noqa: F401
 
 is_local_test = True
 
