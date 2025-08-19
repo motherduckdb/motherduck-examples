@@ -14,10 +14,11 @@ Why this matters: DuckLake cleanly separates metadata (schemas, tables, configur
 
 ## What you’ll need
 
-- Python 3.11+
+- Python 3.12+
 - A MotherDuck account and a DuckDB session that can connect to it (e.g., `MOTHERDUCK_TOKEN` set)
 - An S3 bucket and prefix that will be your  `DATA_PATH`
-- Local Postgres (via Homebrew) or any reachable Postgres for the local catalog
+- Local Postgres (via Homebrew on MacOS) or any reachable Postgres for the local catalog.
+  - Docker can also be used, i.e. via `docker run postgres-16 ...`
 - uv (Python package manager). From this folder, set up the environment with:
 
 ```bash
