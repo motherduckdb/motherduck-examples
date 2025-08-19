@@ -1,11 +1,11 @@
-## Duck Lake Import/Export: Move Metadata, Keep Data Put
+## DuckLake Import/Export: Move Metadata, Keep Data Put
 
-You have data in S3 (Parquet/Iceberg). You have a Duck Lake that points at it. Sometimes you want that Duck Lake’s metadata to live in MotherDuck, and sometimes you want it local (backed by Postgres) for development, testing, or offline work. These scripts help you move the catalog back and forth without touching a single byte of your S3 data.
+You have data in S3 (Parquet/Iceberg). You have a DuckLake that points at it. Sometimes you want that DuckLake’s metadata to live in MotherDuck, and sometimes you want it local (backed by Postgres) for development, testing, or offline work. These scripts help you move the catalog back and forth without touching a single byte of your S3 data.
 
-- `ducklake-export.py`: MotherDuck → local (Postgres-backed) Duck Lake
-- `ducklake-import.py`: local (Postgres-backed) Duck Lake → MotherDuck
+- `ducklake-export.py`: MotherDuck → local (Postgres-backed) DuckLake
+- `ducklake-import.py`: local (Postgres-backed) DuckLake → MotherDuck
 
-Why this matters: Duck Lake cleanly separates metadata (schemas, tables, configuration) from data (your files in S3). Migrating “state” is fast and safe because we copy catalog metadata, not the data itself. Practical, efficient, and — dare we say — it quacks just right.
+Why this matters: DuckLake cleanly separates metadata (schemas, tables, configuration) from data (your files in S3). Migrating “state” is fast and safe because we copy catalog metadata, not the data itself. Practical, efficient, and — dare we say — it quacks just right.
 
 ### Who this is for
 
@@ -16,7 +16,7 @@ Why this matters: Duck Lake cleanly separates metadata (schemas, tables, configu
 
 - Python 3.11+
 - A MotherDuck account and a DuckDB session that can connect to it (e.g., `MOTHERDUCK_TOKEN` set)
-- An S3 bucket and prefix that will be your Duck Lake `DATA_PATH`
+- An S3 bucket and prefix that will be your  `DATA_PATH`
 - Local Postgres (via Homebrew) or any reachable Postgres for the local catalog
 - uv (Python package manager). From this folder, set up the environment with:
 
@@ -30,7 +30,7 @@ Environment variables (export these in your shell):
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 - `AWS_SESSION_TOKEN` (optional, recommended for temporary creds)
-- `DATA_PATH` — S3 URI for your Duck Lake (e.g., `s3://my-bucket/my-prefix/`)
+- `DATA_PATH` — S3 URI for your DuckLake (e.g., `s3://my-bucket/my-prefix/`)
 - `PGUSER` — your local Postgres user (on macOS this is usually `$(whoami)`)
 
 Quick MotherDuck check:
@@ -56,14 +56,14 @@ uv run ducklake-export.py
 
 What happens:
 
-1. Creates a scoped S3 secret in MotherDuck for your `DATA_PATH` and (re)creates a Duck Lake `my_md_ducklake`.
+1. Creates a scoped S3 secret in MotherDuck for your `DATA_PATH` and (re)creates a DuckLake `my_md_ducklake`.
 2. If `is_local_test=True`, creates a tiny demo table (`nl_train_stations`) so you have something to validate with.
 3. Exports the MotherDuck metadata DB (`__ducklake_metadata_my_md_ducklake`) to a local DuckDB file `local_duckdb__ducklake_metadata_my_md_ducklake.duckdb`.
-4. Creates a local Duck Lake attached to Postgres (same `DATA_PATH`).
+4. Creates a local DuckLake attached to Postgres (same `DATA_PATH`).
 5. Copies the exported metadata tables into the local Postgres-backed catalog.
 6. Validates with a count/insert when `is_local_test=True`.
 
-End result: your local Duck Lake mirrors MotherDuck’s catalog and points at the same S3 data.
+End result: your local DuckLake mirrors MotherDuck’s catalog and points at the same S3 data.
 
 ## Quick start: Import (local → MotherDuck)
 
@@ -73,7 +73,7 @@ uv run ducklake-import.py
 
 What happens:
 
-1. Attaches the local Duck Lake (Postgres-backed) that points to your S3 `DATA_PATH`.
+1. Attaches the local DuckLake (Postgres-backed) that points to your S3 `DATA_PATH`.
 2. If `is_local_test=True`, creates the same tiny demo table (`nl_train_stations`).
 3. Copies the local metadata DB (`__ducklake_metadata_my_ducklake`) into a local DuckDB file `local_duckdb__ducklake_metadata_my_ducklake.duckdb`.
 4. Connects to MotherDuck, (re)creates `my_md_ducklake` with the same `DATA_PATH`.
@@ -81,11 +81,11 @@ What happens:
 6. Creates a scoped S3 secret in MotherDuck for the `DATA_PATH`.
 7. Validates with a count/insert when `is_local_test=True`.
 
-End result: your MotherDuck Duck Lake mirrors the local catalog and points at the same S3 data.
+End result: your MotherDuck DuckLake mirrors the local catalog and points at the same S3 data.
 
 ## How this works (in plain terms)
 
-- Duck Lake is a catalog that points at files in S3. The catalog state lives in a database (Postgres locally, a system DB in MotherDuck).
+- DuckLake is a catalog that points at files in S3. The catalog state lives in a database (Postgres locally, a system DB in MotherDuck).
 - We move catalog metadata (schemas, table bindings), not data files. That’s why this is fast and low risk.
 - S3 credentials are stored as secrets and can be scoped to the exact `DATA_PATH` so the catalog only sees what it needs.
 
