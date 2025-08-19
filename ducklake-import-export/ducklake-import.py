@@ -15,6 +15,10 @@
 import duckdb
 import psycopg2
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 is_local_test = True
 
@@ -37,7 +41,7 @@ def remove_if_exists(path: str) -> None:
     except FileNotFoundError:
         pass
     except Exception as e:
-        print(e)
+        logging.error(f"Error removing file {path}: {e}")
 
 
 def ensure_extensions(con: duckdb.DuckDBPyConnection) -> None:
@@ -116,7 +120,7 @@ def copy_tables_to_md_ducklake(
     con.execute('BEGIN TRANSACTION')
     try:
         for schema_name, table_name in tables_to_copy_from:
-            print('schema, table', schema_name, table_name)
+            logging.info(f"Processing schema: {schema_name}, table: {table_name}")
             con.execute(
                 f"truncate table __ducklake_metadata_{target_md_ducklake_name}.main.{table_name}"
             )
@@ -126,11 +130,11 @@ def copy_tables_to_md_ducklake(
                                 from {source_db_name}.{schema_name}.{table_name}
                 """
             )
-        print('COMMIT')
+        logging.info('COMMIT')
         con.execute('COMMIT')
     except Exception as e:
-        print(e)
-        print('ROLLBACK')
+        logging.error(f"Error copying tables to MD ducklake: {e}")
+        logging.info('ROLLBACK')
         con.execute('ROLLBACK')
 
 def setup_local_postgres_catalog(pg_ducklake_dbname: str) -> None:
@@ -144,7 +148,7 @@ def setup_local_postgres_catalog(pg_ducklake_dbname: str) -> None:
             pg_cursor.execute(f"create database {pg_ducklake_dbname}")
             _ = pg_cursor.fetchall()
     except Exception as e:
-        print(e)
+        logging.error(f"Error setting up Postgres catalog: {e}")
 
 if is_local_test:
     setup_local_postgres_catalog(pg_ducklake_dbname)
@@ -178,10 +182,10 @@ if is_local_test:
         """
     )
     test_results = local_con.execute("from nl_train_stations limit 5").fetchall()
-    print(test_results)
+    logging.info(f"Sample data from nl_train_stations: {test_results}")
 
     dbs = local_con.execute("from duckdb_databases()").fetchall()
-    print(dbs)
+    logging.info(f"Available databases: {dbs}")
 
 # Next, copy the PG metadata DB into a DuckDB metadata DB locally (since we have the postgres extension installed)
 local_db_name = f"local_duckdb__ducklake_metadata_{local_ducklake_name}"
@@ -198,7 +202,8 @@ copy_database_to_local(
 md_con = duckdb.connect('md:my_db?attach_mode=single')
 md_con.execute(f"attach '{local_db_name}.duckdb' as {local_db_name}")
 
-print(md_con.execute('show databases;').fetchall())
+databases = md_con.execute('show databases;').fetchall()
+logging.info(f"MotherDuck databases: {databases}")
 
 md_con.execute(
     f"""
@@ -214,7 +219,8 @@ md_con.execute(
 )
 
 md_con.execute(f"attach 'md:__ducklake_metadata_{md_ducklake_name}';")
-print(md_con.execute('from duckdb_databases();').df())
+db_info = md_con.execute('from duckdb_databases();').df()
+logging.info(f"Database information:\n{db_info}")
 
 copy_tables_to_md_ducklake(
     md_con,
@@ -237,9 +243,9 @@ create_s3_secret(
 if is_local_test:
     md_con.execute(f"use {md_ducklake_name}")
     select_test_results = md_con.execute("from nl_train_stations select count(*)").fetchall()
-    print(select_test_results)
+    logging.info(f"Count before insert: {select_test_results}")
 
     _ = md_con.execute("insert into nl_train_stations from nl_train_stations limit 1")
 
     final_test_results = md_con.execute("from nl_train_stations select count(*)").fetchall()
-    print(final_test_results)
+    logging.info(f"Count after insert: {final_test_results}")
