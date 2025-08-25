@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.12"
 
 [[package]]
@@ -123,7 +123,7 @@ wheels = [
 
 [[package]]
 name = "dbt-adapters"
-version = "1.16.0"
+version = "1.16.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "agate" },
@@ -134,14 +134,14 @@ dependencies = [
     { name = "pytz" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8a/95/e486094fb87082a4d2c03e5e128b50093fe28a9531472c2f9e695357ee07/dbt_adapters-1.16.0.tar.gz", hash = "sha256:d4d22c7c7b86730ba3bb056f67109e01846847dc052cf13100be4f11b277a7d9", size = 129169, upload-time = "2025-06-04T16:55:45.715Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c1/ba/0163db84fa6a4339066ce7fee59d83992451beb77370a91989c3db9d499e/dbt_adapters-1.16.5.tar.gz", hash = "sha256:3803c60bcf16bc1cbfdec1b20cee290072d861edbe93b97b3e92a935c57e21d3", size = 130578, upload-time = "2025-08-19T13:52:04.616Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/91/99/e9f6cf53bb60f7a78726a1dfb67bdd5a81899af783177f0b6073e0203f9f/dbt_adapters-1.16.0-py3-none-any.whl", hash = "sha256:54734dcef653d82e93be7b9ab0ad141a4c0d33f04a0435604c4694bb32f29173", size = 166592, upload-time = "2025-06-04T16:55:43.755Z" },
+    { url = "https://files.pythonhosted.org/packages/85/2c/cc5b0d92925db81b6d0fe18bdec904600ba43060299dd36cb62edc80e34a/dbt_adapters-1.16.5-py3-none-any.whl", hash = "sha256:f9128745a0592e0047b37acc99deb12a7aa250f8780969e998b09f7219c03d8c", size = 167096, upload-time = "2025-08-19T13:52:03.136Z" },
 ]
 
 [[package]]
 name = "dbt-common"
-version = "1.25.0"
+version = "1.28.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "agate" },
@@ -158,14 +158,14 @@ dependencies = [
     { name = "requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/15/1c/6837f98b328da87f96624135dcb785e25ebe2ba0f7f764308fee61d46f02/dbt_common-1.25.0.tar.gz", hash = "sha256:b65097b624e9833762a7892a6054fc6d75618bd4f7e58c6859468cefc859d40b", size = 83679, upload-time = "2025-05-20T16:11:21.599Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/df/cc/6444d4eeda5caeb243315558c7833db7b972775d59377c6ccd37c24132bf/dbt_common-1.28.0.tar.gz", hash = "sha256:31f42029cccfdfe072d36abe649a479bad20b86ef711fe32de72411b9acd45c9", size = 83994, upload-time = "2025-08-14T19:21:43.454Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/04/6bf085ef439300fca6cc72b5e81b55de7fc0709155f4715f725a270feb41/dbt_common-1.25.0-py3-none-any.whl", hash = "sha256:857a206efccbe9754787f2b9baa9040ba1f1ddfd04168440224d3864e943251e", size = 85951, upload-time = "2025-05-20T16:11:20.17Z" },
+    { url = "https://files.pythonhosted.org/packages/14/33/65ca41b8ebb54c0fa7d7d184b5de98cf8ef543653cc728428b77597a8471/dbt_common-1.28.0-py3-none-any.whl", hash = "sha256:1c533bdc4327cc4890e033822102fd2319c98448a6de5f5a03c7bdd7d50f7ba0", size = 86081, upload-time = "2025-08-14T19:21:41.76Z" },
 ]
 
 [[package]]
 name = "dbt-core"
-version = "1.9.6"
+version = "1.9.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "agate" },
@@ -188,14 +188,14 @@ dependencies = [
     { name = "sqlparse" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5a/87/b802a9524adc580c489e6d3e7ea713b154b18dcc2cbe8e77d5d1c56cece7/dbt_core-1.9.6.tar.gz", hash = "sha256:4056229c2ec2e60c8488066a1ca305bc9a2cae21ccbbbd779b78a88a5927126f", size = 867937, upload-time = "2025-05-30T17:19:52.713Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f2/7f/cae703ed715ad0f8fc1fa88ba354558525b6003cbebc9b9246c5a1b9183d/dbt_core-1.9.9.tar.gz", hash = "sha256:5e3dff2082546a8710b4e8d3995745e9b2d48d739b247f0af101a629469cc28f", size = 868027, upload-time = "2025-08-15T20:23:58.295Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/90/85/6619e6c1a608833c05ad0994d1bd3a59ce879e796e85820c84a328b8f566/dbt_core-1.9.6-py3-none-any.whl", hash = "sha256:36ae9e54dc7d222f025af4aecbc203ea30d363395e2ca48f7bb351dcad0e7a21", size = 946940, upload-time = "2025-05-30T17:19:50.934Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/5a/b4fbd4be8fee39a4018f357e44ee46a0b9acbb156a07205bb9fca210006f/dbt_core-1.9.9-py3-none-any.whl", hash = "sha256:a79f4be3bf93bfa9ba4d8abf46d4da91ee45d76f494c4eb9bcf805adce176883", size = 947021, upload-time = "2025-08-15T20:23:56.608Z" },
 ]
 
 [[package]]
 name = "dbt-duckdb"
-version = "1.9.3"
+version = "1.9.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dbt-adapters" },
@@ -203,9 +203,9 @@ dependencies = [
     { name = "dbt-core" },
     { name = "duckdb" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/aa/67/25b81b0773c13c5c15a973c4fe585f36d201b6ea4ed742bdf872a8880141/dbt_duckdb-1.9.3.tar.gz", hash = "sha256:53950de9ed9f4d3b5cf91b842054be440a940e24f17e9aa7ffaa2bf1448d65a5", size = 105788, upload-time = "2025-04-21T21:01:28.455Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/23/ec/30497ba442071b0ffccb9332f3f5454bd9bed32e01fb0ef83f44155dfb6d/dbt_duckdb-1.9.4.tar.gz", hash = "sha256:7e64f28bbcf99abfb3e493303d5261b07fdc7381be97338450f326dce2980521", size = 111408, upload-time = "2025-06-25T18:39:54.617Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a8/74/6a27016687920790f45b242c67dd1c1009ba553843e7158deab32635a540/dbt_duckdb-1.9.3-py3-none-any.whl", hash = "sha256:a377b9f7370c42dacf408e7c0041e4b9c3c032f87a77c751cd34ff8c5fc3bf08", size = 70003, upload-time = "2025-04-21T21:01:26.795Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/79/57012a949783f2fb11ba01e480239de5d8679891651518eb18447cf1645b/dbt_duckdb-1.9.4-py3-none-any.whl", hash = "sha256:b3e8ea0f1fc38fe5b1b881c181174b3d701475695312ff724dc65015bceca5da", size = 72088, upload-time = "2025-06-25T18:39:53.087Z" },
 ]
 
 [[package]]
@@ -221,8 +221,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dbt-core", specifier = "==1.9.6" },
-    { name = "dbt-duckdb", specifier = "==1.9.3" },
+    { name = "dbt-core", specifier = "==1.9.9" },
+    { name = "dbt-duckdb", specifier = "==1.9.4" },
     { name = "duckdb", specifier = ">=1.3.1" },
     { name = "flask", specifier = ">=3.1.1" },
 ]
@@ -562,16 +562,16 @@ wheels = [
 
 [[package]]
 name = "protobuf"
-version = "5.29.5"
+version = "6.32.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/43/29/d09e70352e4e88c9c7a198d5645d7277811448d76c23b00345670f7c8a38/protobuf-5.29.5.tar.gz", hash = "sha256:bc1463bafd4b0929216c35f437a8e28731a2b7fe3d98bb77a600efced5a15c84", size = 425226, upload-time = "2025-05-28T23:51:59.82Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c0/df/fb4a8eeea482eca989b51cffd274aac2ee24e825f0bf3cbce5281fa1567b/protobuf-6.32.0.tar.gz", hash = "sha256:a81439049127067fc49ec1d36e25c6ee1d1a2b7be930675f919258d03c04e7d2", size = 440614, upload-time = "2025-08-14T21:21:25.015Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5f/11/6e40e9fc5bba02988a214c07cf324595789ca7820160bfd1f8be96e48539/protobuf-5.29.5-cp310-abi3-win32.whl", hash = "sha256:3f1c6468a2cfd102ff4703976138844f78ebd1fb45f49011afc5139e9e283079", size = 422963, upload-time = "2025-05-28T23:51:41.204Z" },
-    { url = "https://files.pythonhosted.org/packages/81/7f/73cefb093e1a2a7c3ffd839e6f9fcafb7a427d300c7f8aef9c64405d8ac6/protobuf-5.29.5-cp310-abi3-win_amd64.whl", hash = "sha256:3f76e3a3675b4a4d867b52e4a5f5b78a2ef9565549d4037e06cf7b0942b1d3fc", size = 434818, upload-time = "2025-05-28T23:51:44.297Z" },
-    { url = "https://files.pythonhosted.org/packages/dd/73/10e1661c21f139f2c6ad9b23040ff36fee624310dc28fba20d33fdae124c/protobuf-5.29.5-cp38-abi3-macosx_10_9_universal2.whl", hash = "sha256:e38c5add5a311f2a6eb0340716ef9b039c1dfa428b28f25a7838ac329204a671", size = 418091, upload-time = "2025-05-28T23:51:45.907Z" },
-    { url = "https://files.pythonhosted.org/packages/6c/04/98f6f8cf5b07ab1294c13f34b4e69b3722bb609c5b701d6c169828f9f8aa/protobuf-5.29.5-cp38-abi3-manylinux2014_aarch64.whl", hash = "sha256:fa18533a299d7ab6c55a238bf8629311439995f2e7eca5caaff08663606e9015", size = 319824, upload-time = "2025-05-28T23:51:47.545Z" },
-    { url = "https://files.pythonhosted.org/packages/85/e4/07c80521879c2d15f321465ac24c70efe2381378c00bf5e56a0f4fbac8cd/protobuf-5.29.5-cp38-abi3-manylinux2014_x86_64.whl", hash = "sha256:63848923da3325e1bf7e9003d680ce6e14b07e55d0473253a690c3a8b8fd6e61", size = 319942, upload-time = "2025-05-28T23:51:49.11Z" },
-    { url = "https://files.pythonhosted.org/packages/7e/cc/7e77861000a0691aeea8f4566e5d3aa716f2b1dece4a24439437e41d3d25/protobuf-5.29.5-py3-none-any.whl", hash = "sha256:6cf42630262c59b2d8de33954443d94b746c952b01434fc58a417fdbd2e84bd5", size = 172823, upload-time = "2025-05-28T23:51:58.157Z" },
+    { url = "https://files.pythonhosted.org/packages/33/18/df8c87da2e47f4f1dcc5153a81cd6bca4e429803f4069a299e236e4dd510/protobuf-6.32.0-cp310-abi3-win32.whl", hash = "sha256:84f9e3c1ff6fb0308dbacb0950d8aa90694b0d0ee68e75719cb044b7078fe741", size = 424409, upload-time = "2025-08-14T21:21:12.366Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/59/0a820b7310f8139bd8d5a9388e6a38e1786d179d6f33998448609296c229/protobuf-6.32.0-cp310-abi3-win_amd64.whl", hash = "sha256:a8bdbb2f009cfc22a36d031f22a625a38b615b5e19e558a7b756b3279723e68e", size = 435735, upload-time = "2025-08-14T21:21:15.046Z" },
+    { url = "https://files.pythonhosted.org/packages/cc/5b/0d421533c59c789e9c9894683efac582c06246bf24bb26b753b149bd88e4/protobuf-6.32.0-cp39-abi3-macosx_10_9_universal2.whl", hash = "sha256:d52691e5bee6c860fff9a1c86ad26a13afbeb4b168cd4445c922b7e2cf85aaf0", size = 426449, upload-time = "2025-08-14T21:21:16.687Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/7b/607764ebe6c7a23dcee06e054fd1de3d5841b7648a90fd6def9a3bb58c5e/protobuf-6.32.0-cp39-abi3-manylinux2014_aarch64.whl", hash = "sha256:501fe6372fd1c8ea2a30b4d9be8f87955a64d6be9c88a973996cef5ef6f0abf1", size = 322869, upload-time = "2025-08-14T21:21:18.282Z" },
+    { url = "https://files.pythonhosted.org/packages/40/01/2e730bd1c25392fc32e3268e02446f0d77cb51a2c3a8486b1798e34d5805/protobuf-6.32.0-cp39-abi3-manylinux2014_x86_64.whl", hash = "sha256:75a2aab2bd1aeb1f5dc7c5f33bcb11d82ea8c055c9becbb41c26a8c43fd7092c", size = 322009, upload-time = "2025-08-14T21:21:19.893Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/f2/80ffc4677aac1bc3519b26bc7f7f5de7fce0ee2f7e36e59e27d8beb32dd1/protobuf-6.32.0-py3-none-any.whl", hash = "sha256:ba377e5b67b908c8f3072a57b63e2c6a4cbd18aea4ed98d2584350dbf46f2783", size = 169287, upload-time = "2025-08-14T21:21:23.515Z" },
 ]
 
 [[package]]
