@@ -5,3 +5,6 @@ __pycache__/
 *$py.class
 dbt_ingestion_s3/*.duckdb
 dbt_ingestion_s3/local.db
+
+# macOS Finder
+.DS_Store
