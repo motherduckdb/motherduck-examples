@@ -1,6 +1,6 @@
 dbt_ducklake:
   outputs:
-      motherduck:
+    motherduck:
       ## to use create your own database in MotherDuck first
       ## CREATE DATABASE jdw_ducklake 
       ##    (TYPE ducklake, DATA_PATH 's3://...')
