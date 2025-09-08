@@ -55,8 +55,8 @@ dbt_ducklake:
 
 ```mermaid
 graph TB
-    A[TPC-DS Data S3] -->|via MotherDuck Profile| D[DuckLake Storage]
-    A -->|via Local Profile| F[DuckLake]
+    A[TPC-DS Data S3] -->|via MotherDuck Profile| D[DuckLake (s3 parquet)]
+    A -->|via Local Profile| F[DuckLake (local parquet)]
     
     subgraph "MotherDuck (Cloud)"
         D --> E[MotherDuck Storage]
