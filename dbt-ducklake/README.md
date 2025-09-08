@@ -55,15 +55,17 @@ dbt_ducklake:
 
 ```mermaid
 graph TB
-    A[TPC-DS Data S3] --> B[DuckLake Raw Tables]
-    B --> C[MotherDuck Analytics Queries]
-    
-    subgraph "DuckLake (Local)"
-        B
-    end
+    A[TPC-DS Data S3] --> B[MotherDuck Profile]
+    A --> C[Local Profile]
     
     subgraph "MotherDuck (Cloud)"
-        C
+        B --> D[DuckLake Storage]
+        D --> E[MotherDuck Storage]
+    end
+    
+    subgraph "Local Environment"
+        C --> F[DuckLake]
+        F --> G[DuckDB Storage]
     end
 ```
 
