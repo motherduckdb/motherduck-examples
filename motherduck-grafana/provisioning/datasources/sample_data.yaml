@@ -1,0 +1,12 @@
+apiVersion: 1
+datasources:
+  - name: MotherDuck-Sample-Data
+    type: motherduck-duckdb-datasource
+    access: proxy
+    isDefault: true
+    editable: true
+    jsonData:
+      database: "" # Leave blank for MotherDuck
+      initSql: "ATTACH IF NOT EXISTS 'md:sample_data'" # you can have multiple initsql.
+    secureJsonData:
+      token: $__env{motherduck_token}
