@@ -1,0 +1,22 @@
+dbt_ducklake:
+  outputs:
+    motherduck:
+      ## to use create your own database in MotherDuck first
+      ## CREATE DATABASE jdw_ducklake 
+      ##    (TYPE ducklake, DATA_PATH 's3://...')
+      type: duckdb
+      path: 'md:dbt_ducklake'
+      is_ducklake: true
+      schema: test
+      threads: 4
+
+    local:
+      type: duckdb
+      path: 'ducklake:local_dev.db'
+      threads: 4
+      extensions:
+        - ducklake
+      attach:
+        - path: "md:jdw_dev"
+
+  target: motherduck
