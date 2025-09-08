@@ -41,6 +41,9 @@ models:
       raw:
         +tags: ['raw']
         +materialized: table
+        +schema: raw
       queries:
-        +materialized: view
+        # lets put this in its own motherduck database
+        +database: my_db
+        +materialized: table
         +tags: ['queries'] 
