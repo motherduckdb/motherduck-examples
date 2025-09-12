@@ -1,7 +1,6 @@
 # flake8: noqa
 # Import necessary libraries
 import humanize  # Used for human-readable time formatting
-from datetime import timedelta
 import logging
 
 # Configure logging
