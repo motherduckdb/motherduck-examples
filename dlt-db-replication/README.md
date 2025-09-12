@@ -81,6 +81,7 @@ Create or update the `.dlt/secrets.toml` file with your database credentials:
 ```toml
 # PostgreSQL credentials
 [sources.sql_database.credentials]
+drivername = "postgresql"
 database = "your_database_name"
 host = "your_postgres_host"
 password = "your_postgres_password"
