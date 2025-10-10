@@ -1,0 +1,1 @@
+FROM duckdb_extensions()
