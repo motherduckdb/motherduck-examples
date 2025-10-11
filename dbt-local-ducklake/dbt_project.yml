@@ -39,9 +39,9 @@ models:
         +tags: ['raw']
         +materialized: table
         +schema: raw
+        +database: catalog
       queries:
         +materialized: table
         +tags: ['queries'] 
-
-on-run-start:
-  - "Use catalog"
+        +database: catalog
+        +schema: prep

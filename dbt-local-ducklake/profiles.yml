@@ -2,7 +2,7 @@ dbt_local_ducklake:
   outputs:
     local:
       type: duckdb
-      threads: 4
+      threads: 1
 
       extensions:
         - ducklake
@@ -21,19 +21,5 @@ dbt_local_ducklake:
           options:
             data_path: data_files
             meta_secret: ducklake_secret
-    
-    local_sqlite:
-      type: duckdb
-      threads: 4
 
-      extensions:
-        - ducklake
-        - sqlite
-      
-      attach:
-        - path: "ducklake:sqlite:ducklake_sqlite.db"
-          alias: catalog
-          options:
-            data_path: ducklake_files
-
-  target: local_sqlite
+  target: local
