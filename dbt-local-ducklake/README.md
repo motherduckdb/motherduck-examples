@@ -125,7 +125,7 @@ graph LR
    pip install tpchgen-cli
    
    # Generate TPC-H data at scale factor 10
-   tpchgen-cli --scale-factor 10 --output-dir data
+   tpchgen-cli --scale-factor 10 --output-dir data --format=parquet
    ```
 
 2. **Install dbt dependencies**:
