@@ -2,10 +2,11 @@ dbt_local_ducklake:
   outputs:
     local:
       type: duckdb
-      threads: 1
+      threads: 4
 
       extensions:
-        - ducklake
+        - name: ducklake
+          repo: core_nightly
         - postgres
 
       secrets:
