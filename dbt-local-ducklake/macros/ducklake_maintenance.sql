@@ -34,7 +34,7 @@
     {# Expire old snapshots #}
     {{ log(log_prefix ~ " | Expiring snapshots older than 1 hour...", info=True) }}
     {% set expire_query %}
-        CALL ducklake_expire_snapshots('{{ ducklake_alias }}', older_than => now() - INTERVAL '1 hour');
+        CALL ducklake_expire_snapshots('{{ ducklake_alias }}', older_than => now() - INTERVAL '1 minute');
     {% endset %}
     {% do run_query(expire_query) %}
     {{ log(log_prefix ~ " | ✓ Expired old snapshots", info=True) }}
