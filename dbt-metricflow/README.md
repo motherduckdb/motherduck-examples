@@ -1,8 +1,8 @@
 # MetricFlow with DuckDB & MotherDuck
 
-An example showing dbt's MetricFlow semantic layer running on DuckDB (local) and MotherDuck. 
+An example showing dbt's MetricFlow semantic layer with DuckDB (local) and MotherDuck. 
 
-- DuckDB and MotherDuck have full MetricFlow support built into dbt
+- DuckDB and MotherDuck are fully supported by MetricFlow
 - Define metrics once, query from local or cloud
 
 ## Installation
