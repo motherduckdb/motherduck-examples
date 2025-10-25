@@ -1,0 +1,15 @@
+ecommerce_metrics:
+  target: local
+  outputs:
+    local:
+      type: duckdb
+      path: ecommerce_local.duckdb
+      threads: 4
+
+    motherduck:
+      type: duckdb
+      path: md:ecommerce_test_db
+      threads: 4
+      settings:
+        # MotherDuck token will be picked up from environment variable
+        # Set MOTHERDUCK_TOKEN env var before running

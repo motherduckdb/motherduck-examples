@@ -8,3 +8,51 @@ dbt_ingestion_s3/local.db
 
 # macOS Finder
 .DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# dbt
+target/
+dbt_packages/
+logs/
+dbt_modules/
+.user.yml
+
+# DuckDB
+*.duckdb
+*.duckdb.wal
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+Thumbs.db
+
