@@ -1,0 +1,83 @@
+time_spines:
+  - name: time_spine
+    model: ref('metricflow_time_spine')
+    time_column: date_day
+    grains:
+      - name: day
+        column: date_day
+
+semantic_models:
+  - name: orders
+    description: E-commerce order transactions
+    model: ref('fct_orders')
+    defaults:
+      agg_time_dimension: order_date
+
+    entities:
+      - name: order_id
+        type: primary
+        expr: order_id
+      - name: customer
+        type: foreign
+        expr: customer_id
+
+    dimensions:
+      - name: order_date
+        type: time
+        type_params:
+          time_granularity: day
+      - name: status
+        type: categorical
+
+    measures:
+      - name: order_count
+        agg: count
+        expr: order_id
+      - name: total_revenue
+        agg: sum
+        expr: amount
+      - name: average_order_value
+        agg: average
+        expr: amount
+      - name: unique_customers
+        agg: count_distinct
+        expr: customer_id
+
+metrics:
+  - name: revenue
+    description: Total revenue from all orders
+    type: simple
+    label: Total Revenue
+    type_params:
+      measure: total_revenue
+
+  - name: orders
+    description: Total number of orders
+    type: simple
+    label: Order Count
+    type_params:
+      measure: order_count
+
+  - name: avg_order_value
+    description: Average order value
+    type: simple
+    label: Average Order Value
+    type_params:
+      measure: average_order_value
+
+  - name: revenue_per_customer
+    description: Average revenue per customer
+    type: derived
+    label: Revenue Per Customer
+    type_params:
+      expr: revenue / customers
+      metrics:
+        - revenue
+        - customers
+
+  - name: customers
+    description: Count of unique customers
+    type: simple
+    label: Customer Count
+    type_params:
+      measure: unique_customers

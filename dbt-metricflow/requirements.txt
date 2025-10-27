@@ -1,0 +1,16 @@
+# MetricFlow + DuckDB/MotherDuck Requirements
+# Install with: pip install -r requirements.txt
+
+# Core dependencies
+dbt-core>=1.8.0,<2.0.0
+dbt-duckdb>=1.8.0,<2.0.0
+dbt-metricflow>=0.10.0,<1.0.0
+
+# Included automatically via dbt-duckdb and dbt-metricflow:
+# - duckdb>=1.0.0
+# - metricflow>=0.200.0
+# - dbt-semantic-interfaces
+
+# Optional: If you want to use Jupyter notebooks with this data
+# jupyter>=1.0.0
+# pandas>=2.0.0

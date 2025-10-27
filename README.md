@@ -9,6 +9,7 @@ The repository is arranged with each project in a folder serving to be self cont
 - [dbt dual execution](dbt-dual-execution)
 - [dbt DuckLake (cloud)](dbt-ducklake)
 - [dbt DuckLake (local)](dbt-local-ducklake)
+- [dbt MetricFlow](dbt-metricflow)
 - [dlt DB replication](dlt-db-replication)
 - [MotherDuck Grafana](motherduck-grafana)
 - [MotherDuck UI](motherduck-ui)
