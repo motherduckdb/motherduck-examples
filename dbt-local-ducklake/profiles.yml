@@ -23,4 +23,12 @@ dbt_local_ducklake:
             data_path: data_files
             meta_secret: ducklake_secret
 
+    motherduck:
+      type: duckdb
+      threads: 4
+      attach:
+        - path: "md:jdw_ducklake"
+          is_ducklake: true
+          alias: catalog
+
   target: local
