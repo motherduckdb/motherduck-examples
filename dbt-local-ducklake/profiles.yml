@@ -1,0 +1,34 @@
+dbt_local_ducklake:
+  outputs:
+    local:
+      type: duckdb
+      threads: 4
+
+      extensions:
+        - name: ducklake
+          repo: core_nightly
+        - postgres
+
+      secrets:
+        - name: ducklake_secret
+          type: postgres
+          host: localhost
+          port: 5432
+          database: ducklake_catalog
+          
+      attach:
+        - path: "ducklake:postgres:"
+          alias: catalog
+          options:
+            data_path: data_files
+            meta_secret: ducklake_secret
+
+    motherduck:
+      type: duckdb
+      threads: 4
+      attach:
+        - path: "md:jdw_ducklake"
+          is_ducklake: true
+          alias: catalog
+
+  target: local

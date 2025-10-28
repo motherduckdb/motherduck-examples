@@ -1,0 +1,33 @@
+# Name your project! Project names should contain only lowercase characters
+# and underscores. A good package name should reflect your organization's
+# name or the intended use of these models
+name: 'dbt_local_ducklake'
+version: '1.0.0'
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'dbt_local_ducklake'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:         # directories to be removed by `dbt clean`
+  - "target"
+  - "dbt_packages"
+
+models:
+  dbt_local_ducklake:
+    tpch:
+      raw:
+        +tags: ['raw']
+        +materialized: table
+        +schema: raw
+        +database: catalog
+      queries:
+        +materialized: table
+        +tags: ['queries'] 
+        +database: catalog
+        +schema: prep

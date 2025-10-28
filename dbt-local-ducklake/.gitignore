@@ -1,0 +1,9 @@
+
+target/
+dbt_packages/
+logs/
+*.db
+data/
+ducklake_files/
+data_files/
+.user.yml

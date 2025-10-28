@@ -1,0 +1,14 @@
+sources:
+  - name: tpch
+    meta:
+      external_location: |- 
+        data/{name}.parquet
+    tables:
+      - name: customer
+      - name: lineitem
+      - name: nation
+      - name: orders
+      - name: part
+      - name: partsupp
+      - name: region
+      - name: supplier

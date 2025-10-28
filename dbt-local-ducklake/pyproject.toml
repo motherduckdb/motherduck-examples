@@ -1,0 +1,12 @@
+[project]
+name = "dbt-ducklake"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dbt-core==1.9.9",
+    "duckdb>=1.4.1",
+    "dbt-duckdb==1.9.6",
+    "tpchgen-cli>=2.0.1",
+]
