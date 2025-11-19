@@ -1,6 +1,6 @@
-# MotherDuck + dbt + Polaris (Iceberg)
+# MotherDuck + dbt + Iceberg
 
-Run dbt models in MotherDuck while reading Iceberg tables from a Polaris REST catalog. The dbt-duckdb Iceberg plugin (PyIceberg) queries Polaris directly; results are materialized into MotherDuck for analysis.
+Run dbt models in MotherDuck while reading Iceberg tables from a Iceberg REST catalog (defaults to Polaris). The dbt-duckdb Iceberg plugin (PyIceberg) queries Polaris directly. results are materialized into MotherDuck for analysis. Iceberg is not yet supported server-side in MotherDuck—this example relies on DuckDB’s Iceberg support.
 
 ## What’s included
 - `models/tpcds/raw`: Iceberg sources that mirror the Polaris namespace defined by `vars.polaris_namespace` (default `s3`).
