@@ -16,3 +16,4 @@ The repository is arranged with each project in a folder serving to be self cont
 - [Postgres demo](postgres-demo)
 - [Python ingestion](python_ingestion)
 - [SQLMesh demo](sqlmesh_demo)
+- [Cloudflare Workers Containers + MotherDuck (Bun, NYC Taxi)](cloudflare-containers-duckdb)
