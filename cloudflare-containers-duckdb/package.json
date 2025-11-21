@@ -1,0 +1,28 @@
+{
+  "name": "cloudflare-containers-duckdb",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Workers Container (Beta) using native DuckDB to hit MotherDuck and R2 with NYC taxi data.",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch src/index.ts",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "engines": {
+    "bun": ">=1.1.38"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.0.30",
+    "@hono/node-server": "^1.19.6",
+    "dotenv": "^16.4.5",
+    "duckdb": "^1.4.2",
+    "hono": "^4.10.6"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251121.0",
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "bun@1.1.38"
+}

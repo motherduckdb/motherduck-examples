@@ -1,0 +1,20 @@
+name = "duckdb-r2-container"
+main = "src/worker.ts"
+compatibility_date = "2024-10-01"
+
+[[containers]]
+# Cloudflare will build this Dockerfile and deploy the image.
+class_name = "DuckDBContainer"
+image = "./Dockerfile"
+
+[durable_objects]
+bindings = [{ name = "DUCKDB_CONTAINER", class_name = "DuckDBContainer" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["DuckDBContainer"]
+
+[vars]
+# Bucket/object used by the NYC taxi sample endpoint; override as needed.
+R2_BUCKET = "nyc-taxi-data"
+R2_OBJECT_KEY = "nyc_taxi_sample.parquet"

@@ -1,9 +1,3 @@
-{{ config(
-    database="jdw_dev",
-    schema="jdw_tpcds",
-    materialized="table"
-) }}
-
 select
     w_substr,
     sm_type,
