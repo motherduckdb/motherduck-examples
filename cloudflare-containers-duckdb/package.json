@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Cloudflare Workers Container (Beta) using native DuckDB to hit MotherDuck and R2 with NYC taxi data.",
+  "description": "Cloudflare Workers Container (Beta) using native DuckDB to query MotherDuck with NYC taxi data.",
   "scripts": {
     "start": "bun run src/index.ts",
     "dev": "bun --watch src/index.ts",

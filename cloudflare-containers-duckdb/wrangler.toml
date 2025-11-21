@@ -1,4 +1,4 @@
-name = "duckdb-r2-container"
+name = "duckdb-md-container"
 main = "src/worker.ts"
 compatibility_date = "2024-10-01"
 
@@ -15,6 +15,5 @@ tag = "v1"
 new_sqlite_classes = ["DuckDBContainer"]
 
 [vars]
-# Bucket/object used by the NYC taxi sample endpoint; override as needed.
-R2_BUCKET = "nyc-taxi-data"
-R2_OBJECT_KEY = "nyc_taxi_sample.parquet"
+# MotherDuck table used by the NYC taxi sample endpoint; override as needed.
+MOTHERDUCK_TABLE = "nyc_taxi_sample"
