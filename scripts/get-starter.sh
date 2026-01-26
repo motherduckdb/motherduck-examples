@@ -19,6 +19,8 @@ NC='\033[0m' # No Color
 # Configuration
 REPO="motherduckdb/motherduck-examples"
 REPO_URL="https://github.com/${REPO}.git"
+# Default to main, but can be overridden via BRANCH env var for PR testing
+# Example: BRANCH=feat/reorg curl -fsSL ... | bash -s dbt-ai-prompt
 BRANCH="${BRANCH:-main}"
 
 # Available starters (folder names in the repo)
@@ -101,30 +103,46 @@ echo -e "${BLUE}Fetching starter: ${STARTER_NAME}${NC}"
 echo ""
 
 # Clone with minimal history and sparse checkout
+# Note: --sparse flag enables sparse-checkout but we still need to configure it
 git clone --depth 1 --filter=blob:none --sparse -b "${BRANCH}" "${REPO_URL}" "${STARTER_NAME}.tmp" || {
   echo -e "${RED}Error: Failed to clone repository.${NC}"
   echo "Make sure you have git installed and internet connectivity."
+  echo "If using a PR branch, set BRANCH env var: BRANCH=your-branch-name curl ..."
   exit 1
 }
 
 cd "${STARTER_NAME}.tmp"
+# Configure sparse checkout to only get the starter folder
 git sparse-checkout set "${STARTER_NAME}"
+# Checkout the files (sparse checkout doesn't auto-checkout)
+git checkout "${BRANCH}" 2>/dev/null || git checkout HEAD
 
-# Move contents to final location
+# Check if the starter directory exists after sparse checkout
+if [ ! -d "$STARTER_NAME" ]; then
+  echo -e "${RED}Error: Starter directory '${STARTER_NAME}' not found in repository.${NC}"
+  echo "Available directories:"
+  ls -la
+  cd ..
+  rm -rf "${STARTER_NAME}.tmp"
+  exit 1
+fi
+
+# Create final directory in parent
+mkdir -p "../${STARTER_NAME}"
+
+# Move all contents (including hidden files) from starter folder to final location
 if [ -d "$STARTER_NAME" ]; then
-  mv "$STARTER_NAME"/* .
-  mv "$STARTER_NAME"/.* . 2>/dev/null || true
-  rmdir "$STARTER_NAME"
+  # Use find to handle all files including hidden ones
+  find "${STARTER_NAME}" -mindepth 1 -maxdepth 1 -exec mv {} "../${STARTER_NAME}/" \;
+  rmdir "$STARTER_NAME" 2>/dev/null || true
 fi
 
 # Remove git history
 rm -rf .git
 
-# Move back to parent directory
+# Move back to parent directory and clean up
 cd ..
-mv "${STARTER_NAME}.tmp"/* "${STARTER_NAME}" 2>/dev/null || true
-mv "${STARTER_NAME}.tmp"/.* "${STARTER_NAME}" 2>/dev/null || true
-rmdir "${STARTER_NAME}.tmp" 2>/dev/null || true
+rm -rf "${STARTER_NAME}.tmp"
 
 # Final check
 if [ -d "$STARTER_NAME" ] && [ "$(ls -A $STARTER_NAME 2>/dev/null)" ]; then
