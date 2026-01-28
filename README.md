@@ -1,8 +1,6 @@
-# MotherDuck Starters
+# Motherduck examples
 
-Ready-to-use starter projects for building with MotherDuck. Each project is self-contained and can be copied or cloned to kickstart your development.
-
-> **What's a starter?** These are complete, working projects you can copy and modify. Each includes setup instructions, dependencies, and example code. Perfect for bootstrapping your next MotherDuck project.
+Ready-to-use starter projects for building with MotherDuck: self-contained, copy-or-clone projects with setup instructions, dependencies, and example code—perfect for bootstrapping your next MotherDuck project.
 
 ## Quick Start
 
@@ -12,11 +10,11 @@ The fastest way to get started is using the get-starter script:
 curl -fsSL https://raw.githubusercontent.com/motherduckdb/motherduck-examples/main/scripts/get-starter.sh | bash -s <starter-name>
 ```
 
-Or browse the available starters below. Each folder contains a complete, working example with its own README:
+Or browse the available starter projects below. Each folder contains a complete, working example with its own README:
 
 ### Data Ingestion
 
-- **[python-ingestion](python_ingestion)** - Python data ingestion patterns (small and large datasets)
+- **[python-ingestion](python-ingestion)** - Python data ingestion patterns (small and large datasets)
 - **[dbt-ingestion-s3](dbt-ingestion-s3)** - Ingest data from S3 using dbt (local and cloud)
 
 ### dbt Patterns
@@ -33,9 +31,9 @@ Or browse the available starters below. Each folder contains a complete, working
 
 - **[motherduck-grafana](motherduck-grafana)** - Connect Grafana to MotherDuck for visualization
 
-## Getting a Starter
+## Getting a starter project
 
-Each starter is self-contained. You can:
+Each starter project is self-contained. You can:
 
 1. **Clone the entire repo** and navigate to a folder:
    ```bash
@@ -54,26 +52,26 @@ Each starter is self-contained. You can:
    curl -fsSL https://raw.githubusercontent.com/motherduckdb/motherduck-examples/main/scripts/get-starter.sh | bash -s <starter-name>
    ```
    
-   This will download only the starter you need. For example:
+   This will download only the starter project you need. For example:
    ```bash
    curl -fsSL https://raw.githubusercontent.com/motherduckdb/motherduck-examples/main/scripts/get-starter.sh | bash -s dbt-ai-prompt
    ```
    
    The script will:
-   - Download only the selected starter (not the entire repo)
-   - Use the fastest method available (degit or git sparse checkout)
+   - Download only the selected starter project (not the entire repo)
+   - Use git sparse checkout to fetch just the needed folder
    - Create a clean copy without git history
 
-   **Testing from a PR branch**: You can test the script from a PR by using your branch name in the URL:
+   **Testing from a PR branch**: Set the `BRANCH` environment variable to test from a PR branch:
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/motherduckdb/motherduck-examples/<your-branch>/scripts/get-starter.sh | bash -s dbt-ai-prompt
+   BRANCH=feat/reorg curl -fsSL https://raw.githubusercontent.com/motherduckdb/motherduck-examples/feat/reorg/scripts/get-starter.sh | bash -s dbt-ai-prompt
    ```
 
 ## Requirements
 
-Most starters require:
+Most starter projects require:
 - **MotherDuck account** - [Sign up](https://motherduck.com) (free tier available)
 - **MotherDuck token** - Get from [Settings → Access Tokens](https://app.motherduck.com)
-- **dbt** - For dbt-based starters (installed via project dependencies)
+- **dbt** - For dbt-based starter projects (installed via project dependencies)
 
-See each starter's README for specific requirements.
+See each starter project's README for specific requirements.

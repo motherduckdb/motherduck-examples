@@ -1,5 +1,5 @@
 #!/bin/bash
-# get-starter.sh - Download a specific starter from motherduck-examples repository
+# get-starter.sh - Download a specific starter project from motherduck-examples repository
 # 
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/motherduckdb/motherduck-examples/main/scripts/get-starter.sh | bash -s <starter-name>
@@ -23,7 +23,7 @@ REPO_URL="https://github.com/${REPO}.git"
 # Example: BRANCH=feat/reorg curl -fsSL ... | bash -s dbt-ai-prompt
 BRANCH="${BRANCH:-main}"
 
-# Available starters (folder names in the repo)
+# Available starter projects (folder names in the repo)
 AVAILABLE_STARTERS=(
   "dbt-ai-prompt"
   "dbt-dual-execution"
@@ -35,13 +35,13 @@ AVAILABLE_STARTERS=(
   "motherduck-grafana"
   "motherduck-ui"
   "postgres-demo"
-  "python_ingestion"
+  "python-ingestion"
   "sqlmesh-demo"
 )
 
 # Function to print available starters
 list_starters() {
-  echo -e "${BLUE}Available starters:${NC}"
+  echo -e "${BLUE}Available starter projects:${NC}"
   echo ""
   for starter in "${AVAILABLE_STARTERS[@]}"; do
     echo "  - ${starter}"
@@ -65,7 +65,7 @@ STARTER_NAME=${1:-}
 
 # If no starter name provided, show usage
 if [ -z "$STARTER_NAME" ]; then
-  echo -e "${YELLOW}MotherDuck Starters - Get a starter by name${NC}"
+  echo -e "${YELLOW}Motherduck examples - Get a starter project by name${NC}"
   echo ""
   echo "Usage:"
   echo "  curl -fsSL https://raw.githubusercontent.com/${REPO}/${BRANCH}/scripts/get-starter.sh | bash -s <starter-name>"
@@ -81,7 +81,7 @@ fi
 
 # Check if starter exists
 if ! starter_exists "$STARTER_NAME"; then
-  echo -e "${RED}Error: Starter '${STARTER_NAME}' not found.${NC}"
+  echo -e "${RED}Error: Starter project '${STARTER_NAME}' not found.${NC}"
   echo ""
   list_starters
   exit 1
@@ -99,7 +99,7 @@ if [ -d "$STARTER_NAME" ]; then
   rm -rf "$STARTER_NAME"
 fi
 
-echo -e "${BLUE}Fetching starter: ${STARTER_NAME}${NC}"
+echo -e "${BLUE}Fetching starter project: ${STARTER_NAME}${NC}"
 echo ""
 
 # Clone with minimal history and sparse checkout
@@ -119,7 +119,7 @@ git checkout "${BRANCH}" 2>/dev/null || git checkout HEAD
 
 # Check if the starter directory exists after sparse checkout
 if [ ! -d "$STARTER_NAME" ]; then
-  echo -e "${RED}Error: Starter directory '${STARTER_NAME}' not found in repository.${NC}"
+  echo -e "${RED}Error: Starter project directory '${STARTER_NAME}' not found in repository.${NC}"
   echo "Available directories:"
   ls -la
   cd ..
@@ -146,12 +146,12 @@ rm -rf "${STARTER_NAME}.tmp"
 
 # Final check
 if [ -d "$STARTER_NAME" ] && [ "$(ls -A $STARTER_NAME 2>/dev/null)" ]; then
-  echo -e "${GREEN}✓ Starter '${STARTER_NAME}' ready!${NC}"
+  echo -e "${GREEN}✓ Starter project '${STARTER_NAME}' ready!${NC}"
   echo ""
   echo "Next steps:"
   echo "  cd ${STARTER_NAME}"
   echo "  # Follow the README.md for setup instructions"
 else
-  echo -e "${RED}Error: Failed to extract starter '${STARTER_NAME}'.${NC}"
+  echo -e "${RED}Error: Failed to extract starter project '${STARTER_NAME}'.${NC}"
   exit 1
 fi
