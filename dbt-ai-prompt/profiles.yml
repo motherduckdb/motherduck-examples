@@ -1,13 +1,8 @@
-dbt_md_prompt:
+dbt_ai_prompt:
   outputs:
     dev:
       type: duckdb
       schema: main
-      path: md:webshop
-      threads: 1
-    local:
-      type: duckdb
-      schema: main
-      path: webshop.duckdb
+      path: 'md:'
       threads: 1
   target: dev

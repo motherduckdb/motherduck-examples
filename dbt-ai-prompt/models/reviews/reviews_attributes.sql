@@ -71,5 +71,6 @@ from
                     customer_service_sentiment:'the sentiment of the customer service interaction, can only take values `positive`, `neutral` or `negative`'
                 }
             ) as prompt_struct_response
-        from reviews_raw
+        from 
+        (select * from {{ source('reviews', 'reviews_raw') }} limit 10)
     )
