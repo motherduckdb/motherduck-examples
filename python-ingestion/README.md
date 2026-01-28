@@ -19,4 +19,3 @@ make load-md-small # Run the load_to_motherduck_small.py script
 make load-md-large # Run the load_to_motherduck_large.py script
 make test # Run tests
 ```
-

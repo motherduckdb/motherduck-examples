@@ -1,19 +1,30 @@
 {
-    "name": "Python 3",
-    // Use a Dockerfile to define the dev container
-    "build": {
-        "dockerfile": "Dockerfile",
-        "context": "."
+    "name": "TypeScript & Python",
+    // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+    "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+
+    "features": {
+            // Python 3.13 with uv
+            "ghcr.io/devcontainers/features/python:1": {
+                            "version": "3.12",
+                            "installTools": true,
+                            "toolsToInstall": "uv"
+            },
     },
-     "features": {
-        //see https://github.com/devcontainers/features/tree/main/src/docker-in-docker for details on below
-        "ghcr.io/devcontainers/features/docker-in-docker:2": {
-            "version": "latest",
-            "disableIp6tables": true
-        }
-     },
-    "containerEnv": {
-        "motherduck_token": "${localEnv:motherduck_token}"
-    }
-    // Removed runArgs as it's incompatible with GitHub Codespaces
+    // Use 'forwardPorts' to make a list of ports inside the container available locally.
+    // "forwardPorts": [],
+
+    // Set environment variables
+    "remoteEnv": {
+        "DUCKDB_VERSION": "1.4.3"
+    },
+
+    // Use 'postCreateCommand' to run commands after the container is created.
+    "postCreateCommand": "/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/NiclasHaderer/duckdb-version-manager/main/install.sh)\" && source ~/.bashrc 2>/dev/null || true && VERSION=${DUCKDB_VERSION:-latest} && duckman install $VERSION && duckman default $VERSION",
+
+    // Configure tool-specific properties.
+    // "customizations": {},
+
+    // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+    "remoteUser": "root"
 }

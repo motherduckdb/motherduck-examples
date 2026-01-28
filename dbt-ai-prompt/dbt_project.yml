@@ -34,3 +34,4 @@ models:
     # Config indicated by + and applies to all files under models/example/
     reviews:
       +materialized: table
+      +database: my_db

@@ -1,0 +1,10 @@
+sources:
+      - name: reviews
+        description: "Source data for reviews"
+        database: webshop-dbt-md-ai
+        schema: main
+        tables:
+        - name: reviews_raw
+        - name: reviews_meta_raw
+        - name: review_attributes
+        - name: review_attributes_by_product
