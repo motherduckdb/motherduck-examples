@@ -12,6 +12,10 @@ curl -fsSL https://raw.githubusercontent.com/motherduckdb/motherduck-examples/ma
 
 Or browse the available starter projects below. Each folder contains a complete, working example with its own README:
 
+### Getting Started
+
+- **[nodejs-motherduck](nodejs-motherduck)** - Node.js connection and query examples using DuckDB Neo driver
+
 ### Data Ingestion
 
 - **[python-ingestion](python-ingestion)** - Python data ingestion patterns (small and large datasets)

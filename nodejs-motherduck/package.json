@@ -1,0 +1,22 @@
+{
+  "name": "nodejs-motherduck",
+  "version": "1.0.0",
+  "description": "Node.js examples for connecting to MotherDuck using the DuckDB Neo driver",
+  "type": "module",
+  "scripts": {
+    "basic": "node src/basic.js",
+    "pool": "node src/connection-pool.js"
+  },
+  "keywords": [
+    "duckdb",
+    "motherduck",
+    "node",
+    "database"
+  ],
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@duckdb/node-api": "1.4.4-r.1",
+    "dotenv": "^16.4.0",
+    "generic-pool": "^3.9.0"
+  }
+}
