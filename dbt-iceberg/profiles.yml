@@ -1,0 +1,64 @@
+dbt_iceberg:
+  outputs:
+    motherduck:
+      type: duckdb
+      path: "{% set md_token = env_var('MOTHERDUCK_TOKEN', '') %}{{ 'md:dbt_iceberg?motherduck_token=' ~ md_token if md_token else 'md:dbt_iceberg' }}"
+      schema: analytics
+      threads: 4
+      plugins:
+        - module: iceberg
+          config:
+            catalog: polaris
+            type: rest
+            uri: https://polaris.fivetran.com/api/catalog
+            warehouse: "{{ env_var('POLARIS_WAREHOUSE', 'set_me') }}"
+            auth:
+              type: oauth2
+              oauth2:
+                client_id: "{{ env_var('POLARIS_CLIENT_ID') }}"
+                client_secret: "{{ env_var('POLARIS_CLIENT_SECRET') }}"
+                token_url: "{{ env_var('POLARIS_TOKEN_URL', env_var('POLARIS_OAUTH2_SERVER_URI', 'https://polaris.fivetran.com/api/catalog/v1/oauth/tokens')) }}"
+                scope: "{{ env_var('POLARIS_SCOPE', 'PRINCIPAL_ROLE:ALL') }}"
+      # Additional catalog examples (uncomment and adjust as needed):
+      # plugins:
+      #   - module: iceberg
+      #     config:
+      #       catalog: glue
+      #       type: rest
+      #       uri: https://glue.<region>.amazonaws.com/iceberg
+      #       warehouse: <account-id>:s3tablescatalog/<bucket>
+      #       rest.sigv4-enabled: true
+      #       rest.signing-name: glue
+      #       rest.signing-region: <region>
+      #   - module: iceberg
+      #     config:
+      #       catalog: unity
+      #       type: rest
+      #       uri: https://<workspace-url>/api/2.1/unity-catalog/iceberg-rest
+      #       auth:
+      #         type: oauth2
+      #         oauth2:
+      #           token: "{{ env_var('UNITY_PERSONAL_ACCESS_TOKEN') }}"
+      #   - module: iceberg
+      #     config:
+      #       catalog: nessie
+      #       type: rest
+      #       uri: https://<nessie-endpoint>/api/v2
+      #       auth:
+      #         type: basic
+      #         basic:
+      #           username: "{{ env_var('NESSIE_USER') }}"
+      #           password: "{{ env_var('NESSIE_PASSWORD') }}"
+
+    local:
+      type: duckdb
+      path: "iceberg_local.db"
+      threads: 4
+      plugins:
+        - module: iceberg
+          config:
+            catalog: dev_local
+            type: sql
+            uri: sqlite:///iceberg_local_catalog.db
+
+  target: motherduck
