@@ -61,7 +61,9 @@ class MDConnectionFactory {
 
   async create() {
     console.log("Creating new connection...");
-    const instance = await DuckDBInstance.create(
+    // Use fromCache() so all pooled connections share the same cached instance,
+    // avoiding repeated MotherDuck extension reloads and catalog re-fetches.
+    const instance = await DuckDBInstance.fromCache(
       `md:${this.opts.database}?motherduck_token=${this.opts.token}`
     );
     const connection = await instance.connect();

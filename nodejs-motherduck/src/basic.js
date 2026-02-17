@@ -17,9 +17,11 @@ if (!token) {
 }
 
 async function main() {
-  // Connect to MotherDuck
+  // Connect to MotherDuck using fromCache() to avoid reinitializing
+  // the MotherDuck extension on every connection. Unlike Python/R/JDBC,
+  // the Node.js client does NOT cache instances automatically.
   console.log(`Connecting to MotherDuck database: ${database}...`);
-  const instance = await DuckDBInstance.create(
+  const instance = await DuckDBInstance.fromCache(
     `md:${database}?motherduck_token=${token}`
   );
   const connection = await instance.connect();
@@ -77,6 +79,19 @@ async function main() {
   `);
   console.log("NYC taxi sample (5 rows):");
   console.table(sampleReader.getRowObjects());
+  console.log();
+
+  // Example 6: Multiple connections via cached instance
+  console.log("--- Example 6: Reuse cached instance for a second connection ---");
+  const instance2 = await DuckDBInstance.fromCache(
+    `md:${database}?motherduck_token=${token}`
+  );
+  const connection2 = await instance2.connect();
+  const versionReader = await connection2.runAndReadAll(
+    "SELECT version() AS duckdb_version, current_database() AS db"
+  );
+  console.table(versionReader.getRowObjects());
+  connection2.closeSync();
   console.log();
 
   // Cleanup

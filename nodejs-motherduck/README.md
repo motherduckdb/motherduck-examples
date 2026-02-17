@@ -34,15 +34,30 @@ npm run pool   # Run connection-pool.js - concurrent queries with pooling
 
 ### Basic connection
 
+Unlike Python, R, JDBC, and ODBC, the Node.js client does **not** cache database instances automatically. Use `DuckDBInstance.fromCache()` instead of `DuckDBInstance.create()` to avoid reinitializing the MotherDuck extension and re-fetching catalog metadata on every connection.
+
 ```javascript
 import { DuckDBInstance } from "@duckdb/node-api";
 
 const token = process.env.MOTHERDUCK_TOKEN;
-const instance = await DuckDBInstance.create(`md:my_db?motherduck_token=${token}`);
+const instance = await DuckDBInstance.fromCache(`md:my_db?motherduck_token=${token}`);
 const connection = await instance.connect();
 
 const reader = await connection.runAndReadAll("SELECT 42 AS answer");
-console.log(reader.getRowObjects()); // [{ answer: 42 }]
+console.table(reader.getRowObjects()); // [{ answer: 42 }]
+```
+
+### Reusing cached instances
+
+Subsequent calls to `fromCache()` with the same path reuse the existing instance - no reinitialization needed:
+
+```javascript
+const instance1 = await DuckDBInstance.fromCache(`md:my_db?motherduck_token=${token}`);
+const conn1 = await instance1.connect();
+
+// Reuses the same cached instance
+const instance2 = await DuckDBInstance.fromCache(`md:my_db?motherduck_token=${token}`);
+const conn2 = await instance2.connect();
 ```
 
 ### Parameterized queries
@@ -51,12 +66,12 @@ console.log(reader.getRowObjects()); // [{ answer: 42 }]
 const prepared = await connection.prepare("SELECT * FROM users WHERE id = $1");
 prepared.bindInteger(1, 42);
 const reader = await prepared.runAndReadAll();
-console.log(reader.getRowObjects());
+console.table(reader.getRowObjects());
 ```
 
 ### Connection pooling
 
-For applications with concurrent queries, use a connection pool to manage multiple connections efficiently. See `src/connection-pool.js` for a complete implementation using `generic-pool`.
+For applications with concurrent queries, use a connection pool to manage multiple connections efficiently. The pool factory uses `fromCache()` so all pooled connections share the same cached instance. See `src/connection-pool.js` for a complete implementation using `generic-pool`.
 
 ## Documentation
 
