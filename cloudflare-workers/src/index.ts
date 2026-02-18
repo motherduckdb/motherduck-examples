@@ -16,8 +16,15 @@ export default {
 
     try {
       if (url.pathname === "/stats") {
-        const startDate = url.searchParams.get("start") ?? "2022-01-01";
-        const endDate = url.searchParams.get("end") ?? "2022-12-31";
+        const startDate = url.searchParams.get("start");
+        const endDate = url.searchParams.get("end");
+
+        if (!startDate || !endDate) {
+          return Response.json(
+            { error: "Both 'start' and 'end' query parameters are required. Use YYYY-MM-DD format." },
+            { status: 400 }
+          );
+        }
 
         const datePattern = /^\d{4}-\d{2}-\d{2}$/;
         if (!datePattern.test(startDate) || !datePattern.test(endDate)) {
@@ -32,9 +39,9 @@ export default {
             sum(passenger_count)::INTEGER AS total_passengers,
             round(sum(fare_amount), 2) AS total_fare
           FROM nyc.taxi
-          WHERE tpep_pickup_datetime >= $1::TIMESTAMP
-            AND tpep_pickup_datetime < $2::TIMESTAMP`,
-          [startDate, endDate]
+          WHERE tpep_pickup_datetime >= $1
+            AND tpep_pickup_datetime < $2`,
+          [new Date(startDate), new Date(endDate)]
         );
 
         return Response.json({
