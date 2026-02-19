@@ -12,7 +12,14 @@ export default {
     const connectionString = `postgresql://anyusername:${env.MOTHERDUCK_TOKEN}@${env.MOTHERDUCK_HOST}:5432/${env.MOTHERDUCK_DB}?sslmode=require`;
     const client = new Client({ connectionString });
 
-    await client.connect();
+    try {
+      await client.connect();
+    } catch (err) {
+      return Response.json(
+        { error: "Connection failed", detail: String(err) },
+        { status: 502 }
+      );
+    }
 
     try {
       if (url.pathname === "/stats") {
@@ -41,7 +48,7 @@ export default {
           FROM nyc.taxi
           WHERE tpep_pickup_datetime >= $1
             AND tpep_pickup_datetime < $2`,
-          [new Date(startDate), new Date(endDate)]
+          [`${startDate} 00:00:00`, `${endDate} 00:00:00`]
         );
 
         return Response.json({
