@@ -40,7 +40,7 @@ Unlike Python, R, JDBC, and ODBC, the Node.js client does **not** cache database
 import { DuckDBInstance } from "@duckdb/node-api";
 
 const token = process.env.MOTHERDUCK_TOKEN;
-const instance = await DuckDBInstance.fromCache(`md:my_db?motherduck_token=${token}`);
+const instance = await DuckDBInstance.fromCache('md:my_db', { motherduck_token: process.env.motherduck_token })
 const connection = await instance.connect();
 
 const reader = await connection.runAndReadAll("SELECT 42 AS answer");
