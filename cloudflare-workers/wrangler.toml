@@ -1,0 +1,8 @@
+name = "motherduck-taxi-stats"
+main = "src/index.ts"
+compatibility_date = "2026-02-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+MOTHERDUCK_HOST = "pg.us-east-1-aws.motherduck.com"
+MOTHERDUCK_DB = "sample_data"
