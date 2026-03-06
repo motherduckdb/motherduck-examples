@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# DuckDB local files
+*.duckdb
+*.duckdb.wal
+
+# Logs
+*.log
