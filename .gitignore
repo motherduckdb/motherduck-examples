@@ -53,6 +53,14 @@ dbt_modules/
 .coverage
 htmlcov/
 
+# Node
+node_modules/
+**/node_modules/
+
+**/.wrangler/
+.dev.vars
+**/.dev.vars
+
 # OS
 Thumbs.db
 
