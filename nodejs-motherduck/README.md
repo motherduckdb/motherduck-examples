@@ -40,7 +40,7 @@ Unlike Python, R, JDBC, and ODBC, the Node.js client does **not** cache database
 import { DuckDBInstance } from "@duckdb/node-api";
 
 const token = process.env.MOTHERDUCK_TOKEN;
-const instance = await DuckDBInstance.fromCache('md:my_db', { motherduck_token: process.env.motherduck_token })
+const instance = await DuckDBInstance.fromCache('md:my_db', { motherduck_token: token });
 const connection = await instance.connect();
 
 const reader = await connection.runAndReadAll("SELECT 42 AS answer");
@@ -52,11 +52,11 @@ console.table(reader.getRowObjects()); // [{ answer: 42 }]
 Subsequent calls to `fromCache()` with the same path reuse the existing instance - no reinitialization needed:
 
 ```javascript
-const instance1 = await DuckDBInstance.fromCache(`md:my_db?motherduck_token=${token}`);
+const instance1 = await DuckDBInstance.fromCache('md:my_db', { motherduck_token: token });
 const conn1 = await instance1.connect();
 
 // Reuses the same cached instance
-const instance2 = await DuckDBInstance.fromCache(`md:my_db?motherduck_token=${token}`);
+const instance2 = await DuckDBInstance.fromCache('md:my_db', { motherduck_token: token });
 const conn2 = await instance2.connect();
 ```
 
