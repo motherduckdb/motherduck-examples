@@ -31,6 +31,11 @@ Or browse the available starter projects below. Each folder contains a complete,
 
 - **[dlt-db-replication](dlt-db-replication)** - Replicate PostgreSQL to MotherDuck using DLT
 
+### Serverless & Edge
+
+- **[cloudflare-workers](cloudflare-workers)** - Query MotherDuck from Cloudflare Workers via the Postgres endpoint
+- **[vercel-nextjs](vercel-nextjs)** - Query MotherDuck from Vercel + Next.js API routes via the Postgres endpoint
+
 ### Integrations
 
 - **[motherduck-grafana](motherduck-grafana)** - Connect Grafana to MotherDuck for visualization
