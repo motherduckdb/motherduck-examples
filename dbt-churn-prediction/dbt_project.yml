@@ -1,0 +1,40 @@
+name: 'dbt_churn_prediction'
+version: '1.0.0'
+profile: 'dbt_churn_prediction'
+
+vars:
+  churn_as_of_date: '2026-04-15'
+  member_churn_grace_period_days: 30
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  dbt_churn_prediction:
+    +persist_docs:
+      relation: true
+      columns: true
+    staging:
+      +materialized: view
+      +schema: staging
+      +tags: ['churn_daily']
+    marts:
+      +materialized: table
+      +schema: analytics
+      +tags: ['churn_daily']
+
+seeds:
+  dbt_churn_prediction:
+    +schema: raw
+    +quote_columns: false
+    +persist_docs:
+      relation: true
+      columns: true
