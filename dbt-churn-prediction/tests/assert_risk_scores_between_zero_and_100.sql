@@ -1,7 +1,7 @@
 select
     customer_id,
     as_of_date,
-    churn_probability
+    risk_score
 from {{ ref('fct_customer_churn_scores_daily') }}
-where churn_probability < 0
-   or churn_probability > 1
+where risk_score < 0
+   or risk_score > 100

@@ -13,7 +13,7 @@ The example is intentionally compact. It is meant to be copied, understood, and 
 - Builds subscription episodes with churn and right-censoring fields
 - Creates daily customer features for churn scoring
 - Creates historical churn labels for model review or future training
-- Scores churn probability in dbt SQL using versioned coefficients
+- Scores churn risk in dbt SQL using observed segment churn rates and interpretable rules
 - Publishes a business-facing retention queue with reasons and recommended actions
 - Runs locally with DuckDB or in MotherDuck native storage
 
@@ -21,21 +21,20 @@ This example does not use DuckLake or external object storage. In the MotherDuck
 
 ## Modeling approach
 
-This project uses an explainable scorecard model, implemented entirely in SQL.
+This project uses an explainable risk scoring model, implemented entirely in SQL.
 
-The daily score table computes a logistic score:
+The daily score table combines two interpretable signals:
 
 ```text
-churn_logit =
-    intercept
-  + feature_weight_1 * feature_1
-  + feature_weight_2 * feature_2
-  + ...
+observed_churn_rate =
+  historical churned customers / historical labeled customers
 
-churn_probability = 1 / (1 + exp(-churn_logit))
+risk_score =
+  matched risk-rule points
+  + observed_churn_rate adjustment
 ```
 
-The coefficients live in `seeds/churn_score_weights.csv`, which makes the scoring logic easy to review, version, and replace. In a real deployment, those weights can come from a trained logistic regression model, a reviewed business scorecard, or a periodic retraining process. The important design choice is that daily scoring remains simple SQL in dbt.
+The risk rules live in `seeds/churn_risk_rules.csv`, which makes the scoring logic easy to review, version, and replace. A rule can represent an explainable signal such as failed payment, manual renewal risk, long engagement gap, recent complaint, declining usage, or low satisfaction. The important design choice is that daily scoring remains simple SQL in dbt.
 
 The subscription modeling uses survival-analysis concepts without requiring Python runtime scoring:
 
@@ -45,7 +44,7 @@ The subscription modeling uses survival-analysis concepts without requiring Pyth
 - Subscription-start attributes such as plan length, payment method, acquisition channel, and auto-renewal are preserved for feature engineering.
 - `prior_memberships` captures whether a customer is on a first subscription or a reactivated subscription.
 
-This approach works well for operational churn workflows because it is explainable, portable, and easy to schedule. It also gives data science teams a clean foundation for later survival analysis, logistic regression, or more advanced modeling.
+This approach works well for operational churn workflows because it is explainable, portable, and easy to schedule. It also gives data science teams a clean foundation for later cohort analysis, survival analysis, or more advanced modeling.
 
 ## Why use this approach
 
@@ -89,7 +88,7 @@ dbt-churn-prediction/
 |   +-- raw_memberships.csv
 |   +-- raw_usage_events.csv
 |   +-- raw_payments.csv
-|   +-- churn_score_weights.csv
+|   +-- churn_risk_rules.csv
 +-- models/
 |   +-- staging/
 |   |   +-- _sources.yml
@@ -106,7 +105,8 @@ dbt-churn-prediction/
 +-- tests/
     +-- assert_one_feature_row_per_customer_per_day.sql
     +-- assert_one_score_row_per_customer_per_day.sql
-    +-- assert_scores_between_zero_and_one.sql
+    +-- assert_risk_scores_between_zero_and_100.sql
+    +-- assert_segment_rates_between_zero_and_one.sql
     +-- assert_casual_scores_are_eligible.sql
     +-- assert_subscription_duration_positive.sql
     +-- assert_subscription_censoring_consistent.sql
@@ -240,19 +240,22 @@ Those comments are useful for AI agents and BI assistants. They help tools inspe
 - experience: `complaints_60d`, `avg_satisfaction_60d`
 - eligibility: `is_eligible_for_scoring`
 
-`fct_customer_churn_labels` demonstrates label generation for historical evaluation or retraining:
+`fct_customer_churn_labels` demonstrates label generation for historical evaluation:
 
 - members churn over a 30-day horizon
 - casual customers churn when they are eligible and do not return in 60 days
 
-`fct_customer_churn_scores_daily` applies the scorecard and returns one scored row per eligible customer per scoring date.
+`fct_churn_segment_rates` calculates observed historical churn rates by segment and prediction window.
+
+`fct_customer_churn_scores_daily` applies the risk rules, joins observed segment churn rates, and returns one scored row per eligible customer per scoring date.
 
 `mart_retention_queue_daily` is the business-facing table:
 
 - `queue_rank`
 - `customer_id`
 - `segment`
-- `churn_probability`
+- `observed_churn_rate`
+- `risk_score`
 - `risk_band`
 - `top_reason_1`, `top_reason_2`, `top_reason_3`
 - `recommended_action`
@@ -280,7 +283,7 @@ Then update these parts:
 2. Update the staging models to cast and normalize your source fields.
 3. Update `fct_subscription_history` if your churn definition uses a different grace period or renewal rule.
 4. Update `fct_customer_features_daily` with the features that matter in your business.
-5. Replace `churn_score_weights.csv` with reviewed business weights or coefficients from your trained model.
+5. Replace `churn_risk_rules.csv` with risk rules, point values, reasons, and actions that match your use case.
 6. Update the labels in `fct_customer_churn_labels` to match the horizon your team cares about.
 7. Keep the mart output focused on the action queue your team will actually use.
 
@@ -301,7 +304,8 @@ This example includes schema tests and singular tests for:
 - accepted status and segment values
 - one feature row per customer per date
 - one score row per customer per date
-- churn probabilities between 0 and 1
+- observed segment churn rates between 0 and 1
+- risk scores between 0 and 100
 - casual customers only scored when eligible
 - positive subscription durations
 - consistent subscription churn and censoring flags
@@ -310,7 +314,7 @@ Add use-case-specific tests before using the model operationally, especially aro
 
 ## Notes and limits
 
-- The included score weights are example coefficients, not a trained model for your business.
+- The included risk rules and points are example values, not calibrated thresholds for your business.
 - The score is designed for explainability and fast adoption, not maximum predictive accuracy.
 - Do not send retention offers directly from this table without consent, compliance, and suppression logic.
-- For a larger deployment, keep daily scoring in SQL and retrain coefficients weekly or monthly in a separate reviewed process.
+- For a larger deployment, keep daily scoring in SQL and periodically review observed churn rates, rule thresholds, and action outcomes.

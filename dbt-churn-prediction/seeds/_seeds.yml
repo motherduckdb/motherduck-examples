@@ -46,7 +46,7 @@ seeds:
       - name: monthly_price
         description: "Monthly membership price."
       - name: initial_plan_days
-        description: "Plan length selected at subscription start. This mirrors survival-analysis guidance to preserve initial subscription attributes."
+        description: "Plan length selected at subscription start."
       - name: is_auto_renew
         description: "Whether the subscription was created with automatic renewal enabled."
       - name: initial_payment_method
@@ -73,7 +73,7 @@ seeds:
       - name: event_type
         description: "Usage event type such as core_session, premium_feature, or one_time_purchase."
       - name: net_amount
-        description: "Net revenue associated with the usage event. Membership redemptions are represented as zero in this sample."
+        description: "Net revenue associated with the usage event. Included subscription usage is represented as zero in this sample."
       - name: used_coupon
         description: "Whether the usage event used a coupon, credit, or promotion."
       - name: satisfaction_score
@@ -103,20 +103,27 @@ seeds:
       - name: amount
         description: "Payment amount."
 
-  - name: churn_score_weights
-    description: "Versioned SQL scorecard coefficients. Replace these example weights with trained coefficients for your data or reviewed business weights for your use case."
+  - name: churn_risk_rules
+    description: "Interpretable risk rules used to assign risk points, reasons, actions, and offer types in the SQL scoring model."
     columns:
+      - name: rule_name
+        description: "Stable rule identifier used by fct_customer_churn_scores_daily."
+        data_tests:
+          - not_null
+          - unique
       - name: segment
-        description: "Customer behavior segment the coefficient applies to."
+        description: "Segment the rule applies to. Use all when the rule applies to both member and casual customers."
         data_tests:
           - not_null
           - accepted_values:
-              values: ['member', 'casual']
-      - name: feature_name
-        description: "Feature or intercept term used by the SQL scorecard."
+              values: ['member', 'casual', 'all']
+      - name: risk_points
+        description: "Interpretable point contribution added when the rule matches a customer."
         data_tests:
           - not_null
-      - name: coefficient
-        description: "Logistic regression-style coefficient used to calculate churn probability."
-        data_tests:
-          - not_null
+      - name: reason
+        description: "Human-readable reason shown in the retention queue."
+      - name: recommended_action
+        description: "Suggested action when this is the highest-priority matched rule."
+      - name: offer_type
+        description: "Suggested offer or outreach type when this is the highest-priority matched rule."

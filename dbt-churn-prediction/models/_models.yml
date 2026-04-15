@@ -164,7 +164,7 @@ models:
       - name: marketing_opt_in
         description: "Whether retention messaging is allowed for this customer."
       - name: segment
-        description: "Behavior segment used for scoring. Members and casual customers use different coefficient rows."
+        description: "Behavior segment used for scoring. Members and casual customers use different observed-rate horizons and risk rules."
         data_tests:
           - accepted_values:
               values: ['member', 'casual']
@@ -214,7 +214,7 @@ models:
         description: "True when the customer should be scored. Casual customers must have enough usage event history to avoid one-time buyer false positives."
 
   - name: fct_customer_churn_labels
-    description: "Historical labels for training or validating the scorecard. Members use a 30-day horizon; eligible casual customers use a 60-day no-return horizon."
+    description: "Historical labels for calculating observed churn rates and validating the scoring rules. Members use a 30-day horizon; eligible casual customers use a 60-day no-return horizon."
     columns:
       - name: customer_id
         description: "Customer being labeled."
@@ -234,8 +234,24 @@ models:
           - accepted_values:
               values: [0, 1]
 
+  - name: fct_churn_segment_rates
+    description: "Observed historical churn rates by customer segment and prediction window."
+    columns:
+      - name: segment
+        description: "Behavior segment used for the historical churn rate."
+        data_tests:
+          - not_null
+      - name: prediction_window_days
+        description: "Prediction horizon used when calculating the historical churn label."
+      - name: labeled_customers
+        description: "Number of historical labeled customer snapshots in the segment."
+      - name: churned_customers
+        description: "Number of historical labeled customer snapshots that churned."
+      - name: observed_churn_rate
+        description: "Historical churned_customers divided by labeled_customers for this segment and horizon."
+
   - name: fct_customer_churn_scores_daily
-    description: "Daily SQL scorecard output for customers eligible for churn scoring."
+    description: "Daily interpretable churn risk scoring output for customers eligible for scoring. The model combines observed segment churn rates with matched risk rules."
     columns:
       - name: customer_id
         description: "Customer being scored."
@@ -250,7 +266,9 @@ models:
       - name: marketing_opt_in
         description: "Whether retention messaging is allowed for this customer."
       - name: segment
-        description: "Behavior segment used to select the scorecard coefficients."
+        description: "Behavior segment used to select the observed churn rate and applicable risk rules."
+      - name: prediction_window_days
+        description: "Prediction horizon used for this customer score."
       - name: membership_age_days
         description: "Age in days of the active subscription episode as of the scoring date."
       - name: prior_memberships
@@ -273,12 +291,32 @@ models:
         description: "Complaint-flagged usage events in the trailing 60 days."
       - name: avg_satisfaction_60d
         description: "Average satisfaction score in the trailing 60 days."
-      - name: churn_logit
-        description: "Linear score before logistic transformation."
-      - name: churn_probability
-        description: "Estimated probability of segment-specific churn."
+      - name: labeled_customers
+        description: "Number of historical labeled customer snapshots behind the observed segment churn rate."
+      - name: churned_customers
+        description: "Number of historical churned customer snapshots behind the observed segment churn rate."
+      - name: observed_churn_rate
+        description: "Historical churn rate for this customer's segment and prediction window."
+      - name: matched_rule_count
+        description: "Number of interpretable risk rules matched by this customer."
+      - name: rule_risk_points
+        description: "Total points from matched interpretable risk rules."
+      - name: risk_score
+        description: "Final 0 to 100 risk score combining rule_risk_points with observed_churn_rate evidence."
         data_tests:
           - not_null
+      - name: matched_rules
+        description: "Comma-separated list of matched rule names ordered by point contribution."
+      - name: top_reason_1
+        description: "Highest-priority explainable reason for this customer's risk score."
+      - name: top_reason_2
+        description: "Second explainable reason, when available."
+      - name: top_reason_3
+        description: "Third explainable reason, when available."
+      - name: recommended_action
+        description: "Suggested retention action based on the highest-priority matched risk rule."
+      - name: offer_type
+        description: "Suggested offer or outreach type based on the highest-priority matched risk rule."
 
   - name: mart_retention_queue_daily
     description: "Business-facing retention queue sorted by churn risk with explainable reasons and recommended actions."
@@ -297,13 +335,21 @@ models:
         description: "Primary region or segment associated with the customer."
       - name: segment
         description: "Behavior segment used for scoring and action selection."
-      - name: churn_probability
-        description: "Estimated probability of segment-specific churn."
+      - name: prediction_window_days
+        description: "Prediction horizon used for this queue row."
+      - name: observed_churn_rate
+        description: "Historical churn rate for this customer's segment and prediction window."
+      - name: risk_score
+        description: "Final 0 to 100 interpretable risk score."
       - name: risk_band
-        description: "Human-friendly risk band based on churn probability."
+        description: "Human-friendly risk band based on risk_score."
         data_tests:
           - accepted_values:
               values: ['high', 'medium', 'low']
+      - name: matched_rule_count
+        description: "Number of interpretable risk rules matched by this customer."
+      - name: matched_rules
+        description: "Comma-separated list of matched risk rules."
       - name: top_reason_1
         description: "Most important explainable driver for this customer's queue placement."
       - name: top_reason_2
