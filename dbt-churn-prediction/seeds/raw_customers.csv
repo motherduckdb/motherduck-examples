@@ -1,0 +1,7 @@
+customer_id,region_id,customer_name,signup_date,marketing_opt_in
+C001,R001,Avery Stone,2024-06-14,true
+C002,R001,Brooke Miles,2023-11-03,true
+C003,R002,Casey Ford,2024-02-19,true
+C004,R002,Drew Rivera,2025-05-09,false
+C005,R003,Emery Hart,2026-03-07,true
+C006,R003,Finley Brooks,2024-09-24,true

@@ -26,6 +26,7 @@ BRANCH="${BRANCH:-main}"
 # Available starter projects (folder names in the repo)
 AVAILABLE_STARTERS=(
   "dbt-ai-prompt"
+  "dbt-churn-prediction"
   "dbt-dual-execution"
   "dbt-ducklake"
   "dbt-ingestion-s3"
@@ -65,7 +66,7 @@ STARTER_NAME=${1:-}
 
 # If no starter name provided, show usage
 if [ -z "$STARTER_NAME" ]; then
-  echo -e "${YELLOW}Motherduck examples - Get a starter project by name${NC}"
+  echo -e "${YELLOW}MotherDuck examples - Get a starter project by name${NC}"
   echo ""
   echo "Usage:"
   echo "  curl -fsSL https://raw.githubusercontent.com/${REPO}/${BRANCH}/scripts/get-starter.sh | bash -s <starter-name>"

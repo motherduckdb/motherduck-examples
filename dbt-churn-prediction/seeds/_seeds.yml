@@ -1,0 +1,129 @@
+version: 2
+
+seeds:
+  - name: raw_customers
+    description: "Sample customer records for the subscription business. In production this table is usually landed by an ingestion pipeline from a CRM, application database, or billing system."
+    columns:
+      - name: customer_id
+        description: "Stable customer identifier from the source system."
+        data_tests:
+          - not_null
+          - unique
+      - name: region_id
+        description: "Primary region or segment associated with the customer."
+        data_tests:
+          - not_null
+      - name: customer_name
+        description: "Human-readable customer name used in the sample retention queue."
+      - name: signup_date
+        description: "Date when the customer first appeared in the customer system."
+      - name: marketing_opt_in
+        description: "Whether the customer has opted into retention messaging."
+
+  - name: raw_memberships
+    description: "Sample membership/subscription records. This is intentionally small but includes active and canceled customers."
+    columns:
+      - name: membership_id
+        description: "Stable membership identifier."
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: "Customer that owns the membership."
+        data_tests:
+          - not_null
+      - name: status
+        description: "Current membership status from the billing system."
+        data_tests:
+          - accepted_values:
+              values: ['active', 'canceled', 'paused']
+      - name: started_at
+        description: "Date the membership started."
+      - name: canceled_at
+        description: "Date the membership was canceled, when applicable."
+      - name: renewal_date
+        description: "Next scheduled renewal date or final expected renewal date."
+      - name: monthly_price
+        description: "Monthly membership price."
+      - name: initial_plan_days
+        description: "Plan length selected at subscription start."
+      - name: is_auto_renew
+        description: "Whether the subscription was created with automatic renewal enabled."
+      - name: initial_payment_method
+        description: "Payment method used when the subscription started."
+      - name: acquisition_channel
+        description: "Channel that acquired the membership."
+
+  - name: raw_usage_events
+    description: "Sample usage events. Each row is one completed usage event with simple experience and spend signals."
+    columns:
+      - name: event_id
+        description: "Stable usage event identifier."
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: "Customer associated with the usage event."
+        data_tests:
+          - not_null
+      - name: region_id
+        description: "Region or segment associated with the usage event."
+      - name: event_at
+        description: "Timestamp of the usage event."
+      - name: event_type
+        description: "Usage event type such as core_session, premium_feature, or one_time_purchase."
+      - name: net_amount
+        description: "Net revenue associated with the usage event. Included subscription usage is represented as zero in this sample."
+      - name: used_coupon
+        description: "Whether the usage event used a coupon, credit, or promotion."
+      - name: satisfaction_score
+        description: "Optional post-event satisfaction score on a 1 to 10 scale."
+      - name: complaint_flag
+        description: "Whether this usage event had a complaint or service recovery signal."
+
+  - name: raw_payments
+    description: "Sample membership payment attempts. Failed payments are a strong member churn signal."
+    columns:
+      - name: payment_id
+        description: "Stable payment event identifier."
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: "Customer associated with the payment attempt."
+      - name: membership_id
+        description: "Membership associated with the payment attempt."
+      - name: payment_at
+        description: "Timestamp when the payment was attempted."
+      - name: payment_status
+        description: "Payment attempt outcome."
+        data_tests:
+          - accepted_values:
+              values: ['paid', 'failed']
+      - name: amount
+        description: "Payment amount."
+
+  - name: churn_risk_rules
+    description: "Interpretable risk rules used to assign risk points, reasons, actions, and offer types in the SQL scoring model."
+    columns:
+      - name: rule_name
+        description: "Stable rule identifier used by fct_customer_churn_scores_daily."
+        data_tests:
+          - not_null
+          - unique
+      - name: segment
+        description: "Segment the rule applies to. Use all when the rule applies to both member and casual customers."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['member', 'casual', 'all']
+      - name: risk_points
+        description: "Interpretable point contribution added when the rule matches a customer."
+        data_tests:
+          - not_null
+      - name: reason
+        description: "Human-readable reason shown in the retention queue."
+      - name: recommended_action
+        description: "Suggested action when this is the highest-priority matched rule."
+      - name: offer_type
+        description: "Suggested offer or outreach type when this is the highest-priority matched rule."

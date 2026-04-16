@@ -1,0 +1,11 @@
+[project]
+name = "dbt-churn-prediction"
+version = "0.1.0"
+description = "SQL-first churn prediction with dbt, DuckDB, and MotherDuck native storage"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dbt-core==1.9.9",
+    "dbt-duckdb==1.9.6",
+    "duckdb==1.5.1",
+]

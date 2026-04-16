@@ -1,0 +1,88 @@
+version: 2
+
+sources:
+  - name: subscription_raw
+    description: "Raw subscription source tables. The sample project creates these with dbt seeds; production deployments usually replace them with dlt-landed tables in the same schema."
+    schema: "{{ target.schema }}_raw"
+    tables:
+      - name: raw_customers
+        description: "Customer profile records."
+        loaded_at_field: signup_date
+        columns:
+          - name: customer_id
+            description: "Stable customer identifier."
+          - name: region_id
+            description: "Primary region or segment associated with the customer."
+          - name: customer_name
+            description: "Human-readable customer name used in the sample output."
+          - name: signup_date
+            description: "Date when the customer first appeared in the customer system."
+          - name: marketing_opt_in
+            description: "Whether the customer has opted into retention messaging."
+
+      - name: raw_memberships
+        description: "Membership/subscription records with initial plan, payment, auto-renewal, and acquisition attributes."
+        loaded_at_field: started_at
+        columns:
+          - name: membership_id
+            description: "Stable membership identifier."
+          - name: customer_id
+            description: "Customer that owns the membership."
+          - name: status
+            description: "Current membership status from the billing system."
+          - name: started_at
+            description: "Date when the membership started."
+          - name: canceled_at
+            description: "Date when the membership was explicitly canceled, when present."
+          - name: renewal_date
+            description: "Next scheduled renewal date or final expected renewal date."
+          - name: monthly_price
+            description: "Monthly membership price."
+          - name: initial_plan_days
+            description: "Initial membership term length in days."
+          - name: is_auto_renew
+            description: "Whether the membership was created with automatic renewal enabled."
+          - name: initial_payment_method
+            description: "Payment method used when the membership started."
+          - name: acquisition_channel
+            description: "Channel that acquired the membership."
+
+      - name: raw_usage_events
+        description: "Customer usage, purchase, or product activity events."
+        loaded_at_field: event_at
+        columns:
+          - name: event_id
+            description: "Stable usage event identifier."
+          - name: customer_id
+            description: "Customer associated with the usage event."
+          - name: region_id
+            description: "Region or segment associated with the usage event."
+          - name: event_at
+            description: "Timestamp when the usage event happened."
+          - name: event_type
+            description: "Usage event type such as core_session, premium_feature, or one_time_purchase."
+          - name: net_amount
+            description: "Net revenue associated with the usage event."
+          - name: used_coupon
+            description: "Whether the usage event used a coupon, credit, or promotion."
+          - name: satisfaction_score
+            description: "Optional post-event satisfaction score on a 1 to 10 scale."
+          - name: complaint_flag
+            description: "Whether this usage event had a complaint or service recovery signal."
+
+      - name: raw_payments
+        description: "Membership payment events."
+        loaded_at_field: payment_at
+        columns:
+          - name: payment_id
+            description: "Stable payment event identifier."
+          - name: customer_id
+            description: "Customer associated with the payment attempt."
+          - name: membership_id
+            description: "Membership associated with the payment attempt."
+          - name: payment_at
+            description: "Timestamp when the payment was attempted."
+          - name: payment_status
+            description: "Payment attempt outcome."
+          - name: amount
+            description: "Payment amount."

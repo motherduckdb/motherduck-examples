@@ -1,4 +1,4 @@
-# Motherduck examples
+# MotherDuck examples
 
 Ready-to-use starter projects for building with MotherDuck: self-contained, copy-or-clone projects with setup instructions, dependencies, and example code—perfect for bootstrapping your next MotherDuck project.
 
@@ -24,6 +24,7 @@ Or browse the available starter projects below. Each folder contains a complete,
 ### dbt Patterns
 
 - **[dbt-ai-prompt](dbt-ai-prompt)** - Use AI functions in dbt to transform unstructured text
+- **[dbt-churn-prediction](dbt-churn-prediction)** - Build a SQL-first churn prediction queue with dbt and MotherDuck native storage
 - **[dbt-dual-execution](dbt-dual-execution)** - Run dbt models across local and cloud databases
 - **[dbt-metricflow](dbt-metricflow)** - Build semantic layer with MetricFlow (local and cloud)
 

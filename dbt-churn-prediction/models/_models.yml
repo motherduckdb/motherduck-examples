@@ -1,0 +1,362 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: "Clean customer records with typed identifiers, signup dates, and marketing preference fields."
+    columns:
+      - name: customer_id
+        description: "Stable customer identifier from the source system."
+        data_tests:
+          - not_null
+          - unique
+      - name: region_id
+        description: "Primary region or segment associated with the customer."
+      - name: customer_name
+        description: "Customer display name used in the sample retention queue."
+      - name: signup_date
+        description: "Date when the customer first appeared in the customer system."
+      - name: marketing_opt_in
+        description: "Whether the customer has opted into retention messaging."
+
+  - name: stg_memberships
+    description: "Clean membership records with normalized status values, typed dates, and initial subscription attributes."
+    columns:
+      - name: membership_id
+        description: "Stable membership episode identifier."
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: "Customer that owns the membership."
+        data_tests:
+          - not_null
+      - name: status
+        description: "Normalized membership status such as active, canceled, or paused."
+      - name: started_at
+        description: "Date when the membership started."
+      - name: canceled_at
+        description: "Date when the membership was explicitly canceled, when present."
+      - name: renewal_date
+        description: "Next scheduled renewal date or final expected renewal date."
+      - name: monthly_price
+        description: "Monthly membership price at the start of the episode."
+      - name: initial_plan_days
+        description: "Initial membership term length in days."
+      - name: is_auto_renew
+        description: "Whether the membership was set up for automatic renewal."
+      - name: initial_payment_method
+        description: "Payment method used when the membership started."
+      - name: acquisition_channel
+        description: "Channel that acquired the membership."
+
+  - name: stg_usage_events
+    description: "Clean usage event records with one row per completed customer usage event."
+    columns:
+      - name: event_id
+        description: "Stable usage event identifier."
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: "Customer associated with the usage event."
+        data_tests:
+          - not_null
+      - name: region_id
+        description: "Region or segment associated with the usage event."
+      - name: event_at
+        description: "Timestamp when the usage event happened."
+      - name: event_date
+        description: "Date of the usage event, derived from event_at."
+      - name: event_type
+        description: "Usage event type such as core_session, premium_feature, or purchase."
+      - name: net_amount
+        description: "Net revenue associated with the usage event. Included subscription usage is zero in the sample data."
+      - name: used_coupon
+        description: "Whether the usage event used a coupon, credit, or promotion."
+      - name: satisfaction_score
+        description: "Optional post-event satisfaction score on a 1 to 10 scale."
+      - name: complaint_flag
+        description: "Whether this usage event had a complaint or service recovery signal."
+
+  - name: stg_payments
+    description: "Clean membership payment attempts used to identify payment-driven member churn risk."
+    columns:
+      - name: payment_id
+        description: "Stable payment event identifier."
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: "Customer associated with the payment attempt."
+      - name: membership_id
+        description: "Membership associated with the payment attempt."
+      - name: payment_at
+        description: "Timestamp when the payment was attempted."
+      - name: payment_date
+        description: "Date when the payment was attempted."
+      - name: payment_status
+        description: "Normalized payment outcome."
+      - name: amount
+        description: "Payment amount."
+
+  - name: fct_subscription_history
+    description: "One row per membership episode with duration, churn, censoring, prior-subscription, and initial subscription attributes."
+    columns:
+      - name: membership_id
+        description: "Membership episode identifier."
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: "Customer that owns the membership episode."
+        data_tests:
+          - not_null
+      - name: started_at
+        description: "Date when the subscription episode began."
+      - name: ended_at
+        description: "Observed churn date for the episode. Null means the episode is right-censored at observation_end_date."
+      - name: observation_end_date
+        description: "Date used to censor still-active subscriptions."
+      - name: churn_grace_period_days
+        description: "Grace period used before expired non-active memberships are treated as churned."
+      - name: duration_days
+        description: "Subscription episode duration through ended_at or observation_end_date."
+        data_tests:
+          - not_null
+      - name: churned
+        description: "One if the subscription episode has an observed churn event, otherwise zero."
+        data_tests:
+          - accepted_values:
+              values: [0, 1]
+      - name: is_censored
+        description: "One if the subscription episode is still active at the observation end date."
+        data_tests:
+          - accepted_values:
+              values: [0, 1]
+      - name: prior_memberships
+        description: "Number of previous subscription episodes for this customer."
+      - name: monthly_price
+        description: "Monthly membership price for this subscription episode."
+      - name: initial_plan_days
+        description: "Initial membership term length in days for this episode."
+      - name: is_auto_renew
+        description: "One when the membership episode was set up for automatic renewal."
+      - name: initial_payment_method
+        description: "Payment method used when this subscription episode started."
+      - name: acquisition_channel
+        description: "Channel that acquired this subscription episode."
+
+  - name: fct_customer_features_daily
+    description: "One row per customer and as_of_date with explainable churn features for member and casual customer scoring."
+    columns:
+      - name: customer_id
+        description: "Customer being scored."
+        data_tests:
+          - not_null
+      - name: as_of_date
+        description: "Feature snapshot date. Defaults to the dbt var churn_as_of_date."
+        data_tests:
+          - not_null
+      - name: region_id
+        description: "Primary region or segment associated with the customer."
+      - name: customer_name
+        description: "Customer display name for the sample retention queue."
+      - name: marketing_opt_in
+        description: "Whether retention messaging is allowed for this customer."
+      - name: segment
+        description: "Behavior segment used for scoring. Members and casual customers use different observed-rate horizons and risk rules."
+        data_tests:
+          - accepted_values:
+              values: ['member', 'casual']
+      - name: is_active_member
+        description: "One when the customer has an active membership as of the feature date."
+      - name: membership_id
+        description: "Active membership episode identifier as of the feature date, when present."
+      - name: next_renewal_date
+        description: "Next scheduled renewal date for the active membership, when present."
+      - name: days_until_renewal
+        description: "Days from as_of_date until next_renewal_date for active members."
+      - name: membership_age_days
+        description: "Age in days of the active subscription episode as of the feature date. Casual customers receive zero."
+      - name: prior_memberships
+        description: "Number of prior membership episodes for this customer."
+      - name: initial_plan_days
+        description: "Initial plan length for the active membership episode."
+      - name: is_auto_renew
+        description: "One when the active membership episode is set up for automatic renewal."
+      - name: initial_payment_method
+        description: "Initial payment method for the active membership episode."
+      - name: acquisition_channel
+        description: "Acquisition channel for the active membership episode."
+      - name: last_event_date
+        description: "Most recent usage event date on or before as_of_date."
+      - name: days_since_last_event
+        description: "Recency feature measured as days from last usage event to as_of_date."
+      - name: events_30d
+        description: "Frequency feature counting usage events in the trailing 30 days."
+      - name: events_60d
+        description: "Frequency feature counting usage events in the trailing 60 days."
+      - name: events_90d
+        description: "Frequency feature counting usage events in the trailing 90 days."
+      - name: events_120d
+        description: "Eligibility feature counting usage events in the trailing 120 days."
+      - name: events_180d
+        description: "Eligibility feature counting usage events in the trailing 180 days."
+      - name: spend_90d
+        description: "Monetary feature summing non-membership usage event revenue in the trailing 90 days."
+      - name: complaints_60d
+        description: "Count of complaint-flagged usage events in the trailing 60 days."
+      - name: failed_payments_30d
+        description: "Count of failed membership payment attempts in the trailing 30 days."
+      - name: avg_satisfaction_60d
+        description: "Average post-event satisfaction score in the trailing 60 days."
+      - name: is_eligible_for_scoring
+        description: "True when the customer should be scored. Casual customers must have enough usage event history to avoid one-time buyer false positives."
+
+  - name: fct_customer_churn_labels
+    description: "Historical labels for calculating observed churn rates and validating the scoring rules. Members use a 30-day horizon; eligible casual customers use a 60-day no-return horizon."
+    columns:
+      - name: customer_id
+        description: "Customer being labeled."
+        data_tests:
+          - not_null
+      - name: as_of_date
+        description: "Historical label snapshot date."
+      - name: segment
+        description: "Behavior segment at the label snapshot date."
+      - name: is_eligible_for_label
+        description: "True when the row has enough history to receive a churn label."
+      - name: prediction_window_days
+        description: "Prediction horizon used to calculate the churn label."
+      - name: churned
+        description: "Binary churn label for the segment-specific horizon."
+        data_tests:
+          - accepted_values:
+              values: [0, 1]
+
+  - name: fct_churn_segment_rates
+    description: "Observed historical churn rates by customer segment and prediction window."
+    columns:
+      - name: segment
+        description: "Behavior segment used for the historical churn rate."
+        data_tests:
+          - not_null
+      - name: prediction_window_days
+        description: "Prediction horizon used when calculating the historical churn label."
+      - name: labeled_customers
+        description: "Number of historical labeled customer snapshots in the segment."
+      - name: churned_customers
+        description: "Number of historical labeled customer snapshots that churned."
+      - name: observed_churn_rate
+        description: "Historical churned_customers divided by labeled_customers for this segment and horizon."
+
+  - name: fct_customer_churn_scores_daily
+    description: "Daily interpretable churn risk scoring output for customers eligible for scoring. The model combines observed segment churn rates with matched risk rules."
+    columns:
+      - name: customer_id
+        description: "Customer being scored."
+        data_tests:
+          - not_null
+      - name: as_of_date
+        description: "Scoring date."
+      - name: region_id
+        description: "Primary region or segment associated with the customer."
+      - name: customer_name
+        description: "Customer display name for the sample retention queue."
+      - name: marketing_opt_in
+        description: "Whether retention messaging is allowed for this customer."
+      - name: segment
+        description: "Behavior segment used to select the observed churn rate and applicable risk rules."
+      - name: prediction_window_days
+        description: "Prediction horizon used for this customer score."
+      - name: membership_age_days
+        description: "Age in days of the active subscription episode as of the scoring date."
+      - name: prior_memberships
+        description: "Number of prior membership episodes for this customer."
+      - name: is_auto_renew
+        description: "One when the active membership episode is set up for automatic renewal."
+      - name: days_since_last_event
+        description: "Days between the customer's last usage event and the scoring date."
+      - name: events_30d
+        description: "Number of usage events in the trailing 30 days."
+      - name: events_60d
+        description: "Number of usage events in the trailing 60 days."
+      - name: events_90d
+        description: "Number of usage events in the trailing 90 days."
+      - name: spend_90d
+        description: "Net usage revenue in the trailing 90 days."
+      - name: failed_payments_30d
+        description: "Failed membership payment attempts in the trailing 30 days."
+      - name: complaints_60d
+        description: "Complaint-flagged usage events in the trailing 60 days."
+      - name: avg_satisfaction_60d
+        description: "Average satisfaction score in the trailing 60 days."
+      - name: labeled_customers
+        description: "Number of historical labeled customer snapshots behind the observed segment churn rate."
+      - name: churned_customers
+        description: "Number of historical churned customer snapshots behind the observed segment churn rate."
+      - name: observed_churn_rate
+        description: "Historical churn rate for this customer's segment and prediction window."
+      - name: matched_rule_count
+        description: "Number of interpretable risk rules matched by this customer."
+      - name: rule_risk_points
+        description: "Total points from matched interpretable risk rules."
+      - name: risk_score
+        description: "Final 0 to 100 risk score combining rule_risk_points with observed_churn_rate evidence."
+        data_tests:
+          - not_null
+      - name: matched_rules
+        description: "Comma-separated list of matched rule names ordered by point contribution."
+      - name: top_reason_1
+        description: "Highest-priority explainable reason for this customer's risk score."
+      - name: top_reason_2
+        description: "Second explainable reason, when available."
+      - name: top_reason_3
+        description: "Third explainable reason, when available."
+      - name: recommended_action
+        description: "Suggested retention action based on the highest-priority matched risk rule."
+      - name: offer_type
+        description: "Suggested offer or outreach type based on the highest-priority matched risk rule."
+
+  - name: mart_retention_queue_daily
+    description: "Business-facing retention queue sorted by churn risk with explainable reasons and recommended actions."
+    columns:
+      - name: as_of_date
+        description: "Queue date."
+      - name: queue_rank
+        description: "Priority rank within the queue date."
+        data_tests:
+          - not_null
+      - name: customer_id
+        description: "Customer recommended for retention action."
+      - name: customer_name
+        description: "Customer display name for the queue."
+      - name: region_id
+        description: "Primary region or segment associated with the customer."
+      - name: segment
+        description: "Behavior segment used for scoring and action selection."
+      - name: prediction_window_days
+        description: "Prediction horizon used for this queue row."
+      - name: observed_churn_rate
+        description: "Historical churn rate for this customer's segment and prediction window."
+      - name: risk_score
+        description: "Final 0 to 100 interpretable risk score."
+      - name: risk_band
+        description: "Human-friendly risk band based on risk_score."
+        data_tests:
+          - accepted_values:
+              values: ['high', 'medium', 'low']
+      - name: matched_rule_count
+        description: "Number of interpretable risk rules matched by this customer."
+      - name: matched_rules
+        description: "Comma-separated list of matched risk rules."
+      - name: top_reason_1
+        description: "Most important explainable driver for this customer's queue placement."
+      - name: top_reason_2
+        description: "Second explainable driver, when available."
+      - name: top_reason_3
+        description: "Messaging eligibility context for operators."
+      - name: recommended_action
+        description: "Suggested retention action for the operations or marketing team."
+      - name: offer_type
+        description: "Offer or outreach type aligned with the recommended action."
