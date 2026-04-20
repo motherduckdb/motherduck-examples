@@ -25,6 +25,7 @@ Or browse the available starter projects below. Each folder contains a complete,
 
 - **[dbt-ai-prompt](dbt-ai-prompt)** - Use AI functions in dbt to transform unstructured text
 - **[dbt-churn-prediction](dbt-churn-prediction)** - Build a SQL-first churn prediction queue with dbt and MotherDuck native storage
+- **[dbt-customer-segmentation](dbt-customer-segmentation)** - Build a retail customer segmentation workflow with dbt, Python models, and MotherDuck native storage
 - **[dbt-dual-execution](dbt-dual-execution)** - Run dbt models across local and cloud databases
 - **[dbt-metricflow](dbt-metricflow)** - Build semantic layer with MetricFlow (local and cloud)
 
