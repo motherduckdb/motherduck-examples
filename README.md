@@ -35,6 +35,7 @@ Or browse the available starter projects below. Each folder contains a complete,
 ### Serverless & Edge
 
 - **[cloudflare-workers](cloudflare-workers)** - Query MotherDuck from Cloudflare Workers via the Postgres endpoint
+- **[cloudflare-workers-duckoffee](cloudflare-workers-duckoffee)** - Full-stack Cloudflare Workers demo: world map, live sales chart, and Durable Object voting, all backed by a MotherDuck share
 - **[vercel-nextjs](vercel-nextjs)** - Query MotherDuck from Vercel + Next.js API routes via the Postgres endpoint
 
 ### Integrations
