@@ -97,3 +97,7 @@ As always, sanitize input on any endpoint that accepts it:
 - **Add a candidate city.** Add an entry to `CANDIDATES` in `src/index.ts`. The `id` becomes the stable key stored in the Durable Object, so pick something kebab-case and don't rename it after the fact.
 - **Add an existing cafe.** Drop a new row into `duckoffee.locations` (in your own copy of the dataset) and add the lat/lon to the `CITY_COORDS` map in `src/index.ts`.
 - **Tweak the look.** Brand colors live as CSS variables at the top of `public/style.css`. The ducks and database characters under `public/assets/` can be swapped for your own SVGs.
+
+## Recreate this from scratch with your own theme
+
+See [`PROMPT.md`](./PROMPT.md) for a single self-contained prompt you can paste into a coding agent (Claude Code, Cursor, Codex, etc.) to build a variant of this project with your own brand, dataset, and voting question, keeping the same Worker + Durable Object + MotherDuck architecture.
