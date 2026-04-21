@@ -7,7 +7,7 @@ Ready-to-use starter projects for building with MotherDuck: self-contained, copy
 The fastest way to get started is using the get-starter script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/motherduckdb/motherduck-examples/main/scripts/get-starter.sh | bash -s <starter-name>
+curl -fsSL https://get.motherduck.com | bash -s <starter-name>
 ```
 
 Or browse the available starter projects below. Each folder contains a complete, working example with its own README:
@@ -58,24 +58,24 @@ Each starter project is self-contained. You can:
    cd my-new-project
    ```
 
-3. **Use the get-starter script** (recommended): 
+3. **Use the get-starter script** (recommended):
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/motherduckdb/motherduck-examples/main/scripts/get-starter.sh | bash -s <starter-name>
+   curl -fsSL https://get.motherduck.com | bash -s <starter-name>
    ```
-   
+
    This will download only the starter project you need. For example:
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/motherduckdb/motherduck-examples/main/scripts/get-starter.sh | bash -s dbt-ai-prompt
+   curl -fsSL https://get.motherduck.com | bash -s dbt-ai-prompt
    ```
-   
+
    The script will:
    - Download only the selected starter project (not the entire repo)
    - Use git sparse checkout to fetch just the needed folder
    - Create a clean copy without git history
 
-   **Testing from a PR branch**: Set the `BRANCH` environment variable to test from a PR branch:
+   **Testing from a PR branch**: set the `BRANCH` environment variable and fetch the script from that branch directly (since `get.motherduck.com` always serves the `main` version):
    ```bash
-   BRANCH=feat/reorg curl -fsSL https://raw.githubusercontent.com/motherduckdb/motherduck-examples/feat/reorg/scripts/get-starter.sh | bash -s dbt-ai-prompt
+   BRANCH=my-branch curl -fsSL https://raw.githubusercontent.com/motherduckdb/motherduck-examples/my-branch/scripts/get-starter.sh | bash -s dbt-ai-prompt
    ```
 
 ## Requirements
