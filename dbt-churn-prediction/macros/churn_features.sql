@@ -29,8 +29,7 @@ customer_dates as (
         customers.marketing_opt_in,
         feature_dates.as_of_date
     from customers
-    inner join {{ as_of_relation }} as feature_dates
-        on true
+    cross join {{ as_of_relation }} as feature_dates
 ),
 
 membership_state as (

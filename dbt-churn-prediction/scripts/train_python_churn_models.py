@@ -48,6 +48,8 @@ class PreparedDataset:
     survival_frame: pd.DataFrame | None = None
     survival_duration_col: str | None = None
     survival_event_col: str | None = None
+    current_frame: pd.DataFrame | None = None
+    current_metadata_cols: list[str] | None = None
 
 
 def parse_args() -> argparse.Namespace:
@@ -174,6 +176,41 @@ def load_dbt_training_dataset(database: str) -> PreparedDataset:
             """
         ).df()
 
+        current_frame = connection.sql(
+            f"""
+            select
+                customer_id,
+                as_of_date,
+                region_id,
+                customer_name,
+                marketing_opt_in,
+                segment,
+                is_active_member,
+                membership_id,
+                next_renewal_date,
+                days_until_renewal,
+                membership_age_days,
+                prior_memberships,
+                initial_plan_days,
+                is_auto_renew,
+                initial_payment_method,
+                acquisition_channel,
+                last_event_date,
+                days_since_last_event,
+                events_30d,
+                events_60d,
+                events_90d,
+                events_120d,
+                events_180d,
+                spend_90d,
+                complaints_60d,
+                failed_payments_30d,
+                avg_satisfaction_60d
+            from {analytics_schema_name}.fct_customer_features_daily
+            where is_eligible_for_scoring
+            """
+        ).df()
+
         survival_frame = connection.sql(
             f"""
             select
@@ -203,7 +240,9 @@ def load_dbt_training_dataset(database: str) -> PreparedDataset:
     date_cols = ["as_of_date", "next_renewal_date", "last_event_date"]
     for column in date_cols:
         frame[column] = pd.to_datetime(frame[column], errors="coerce")
+        current_frame[column] = pd.to_datetime(current_frame[column], errors="coerce")
     frame["marketing_opt_in"] = frame["marketing_opt_in"].astype(bool)
+    current_frame["marketing_opt_in"] = current_frame["marketing_opt_in"].astype(bool)
 
     return PreparedDataset(
         name="dbt",
@@ -220,6 +259,15 @@ def load_dbt_training_dataset(database: str) -> PreparedDataset:
         survival_frame=survival_frame,
         survival_duration_col="duration_days",
         survival_event_col="churned",
+        current_frame=current_frame,
+        current_metadata_cols=[
+            "customer_id",
+            "as_of_date",
+            "customer_name",
+            "membership_id",
+            "next_renewal_date",
+            "last_event_date",
+        ],
     )
 
 
@@ -263,6 +311,7 @@ def split_frame(
     target_col: str,
     metadata_cols: list[str],
     random_state: int,
+    time_split_col: str | None = None,
 ) -> tuple[
     pd.DataFrame,
     pd.DataFrame,
@@ -277,6 +326,46 @@ def split_frame(
     metadata = frame[metadata_cols].copy()
     y = frame[target_col].copy()
     X = frame.drop(columns=metadata_cols + [target_col]).copy()
+
+    if time_split_col is not None:
+        snapshot_dates = sorted(pd.Series(metadata[time_split_col].dropna().unique()).tolist())
+        if len(snapshot_dates) < 3:
+            raise ValueError(
+                f"Need at least 3 distinct {time_split_col} values for a time-based train/validation/test split."
+            )
+
+        test_date = snapshot_dates[-1]
+        validation_date = snapshot_dates[-2]
+        train_dates = snapshot_dates[:-2]
+
+        train_mask = metadata[time_split_col].isin(train_dates)
+        validation_mask = metadata[time_split_col] == validation_date
+        test_mask = metadata[time_split_col] == test_date
+
+        X_train = X.loc[train_mask].reset_index(drop=True)
+        X_val = X.loc[validation_mask].reset_index(drop=True)
+        X_test = X.loc[test_mask].reset_index(drop=True)
+        y_train = y.loc[train_mask].reset_index(drop=True)
+        y_val = y.loc[validation_mask].reset_index(drop=True)
+        y_test = y.loc[test_mask].reset_index(drop=True)
+        metadata_train = metadata.loc[train_mask].reset_index(drop=True)
+        metadata_val = metadata.loc[validation_mask].reset_index(drop=True)
+        metadata_test = metadata.loc[test_mask].reset_index(drop=True)
+
+        if min(len(X_train), len(X_val), len(X_test)) == 0:
+            raise ValueError("Time-based split produced an empty train, validation, or test partition.")
+
+        return (
+            X_train,
+            X_val,
+            X_test,
+            y_train,
+            y_val,
+            y_test,
+            metadata_train,
+            metadata_val,
+            metadata_test,
+        )
 
     X_train_val, X_test, y_train_val, y_test, metadata_train_val, metadata_test = train_test_split(
         X,
@@ -408,7 +497,7 @@ def run_model_benchmark(
     dataset: PreparedDataset,
     output_dir: Path,
     random_state: int,
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict[str, Any], Any]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, dict[str, Any], Any]:
     (
         X_train,
         X_val,
@@ -424,6 +513,7 @@ def run_model_benchmark(
         target_col=dataset.target_col,
         metadata_cols=dataset.metadata_cols,
         random_state=random_state,
+        time_split_col="as_of_date" if dataset.name == "dbt" and "as_of_date" in dataset.metadata_cols else None,
     )
 
     numeric_cols = X_train.select_dtypes(include=["number", "bool"]).columns.tolist()
@@ -507,15 +597,41 @@ def run_model_benchmark(
         "numeric_features": numeric_cols,
     }
 
+    current_scores = build_current_scores(
+        dataset=dataset,
+        calibrated_estimator=calibrated_estimator,
+        threshold=best_threshold,
+    )
+
     plot_validation_curves(validation_curves, validation_pr_curves, output_dir)
     plot_test_distribution(calibrated_probabilities, output_dir)
     return (
         pd.DataFrame(metric_rows),
         predictions,
         feature_importance,
+        current_scores,
         summary,
         calibrated_estimator,
     )
+
+
+def build_current_scores(
+    dataset: PreparedDataset,
+    calibrated_estimator: Any,
+    threshold: float,
+) -> pd.DataFrame:
+    if dataset.current_frame is None or not dataset.current_metadata_cols:
+        return pd.DataFrame()
+
+    current_metadata = dataset.current_frame[dataset.current_metadata_cols].copy().reset_index(drop=True)
+    current_features = dataset.current_frame.drop(columns=dataset.current_metadata_cols).copy()
+    current_probabilities = calibrated_estimator.predict_proba(current_features)[:, 1]
+
+    current_scores = current_metadata.copy()
+    current_scores["predicted_probability"] = current_probabilities
+    current_scores["predicted_churn"] = (current_probabilities >= threshold).astype(int)
+    current_scores["threshold"] = threshold
+    return current_scores
 
 
 def extract_feature_importance(
@@ -708,6 +824,7 @@ def write_outputs(
     metrics: pd.DataFrame,
     predictions: pd.DataFrame,
     feature_importance: pd.DataFrame,
+    current_scores: pd.DataFrame,
     survival_summary: pd.DataFrame,
     summary: dict[str, Any],
     calibrated_estimator: Any,
@@ -717,6 +834,8 @@ def write_outputs(
     metrics.to_csv(output_dir / "model_metrics.csv", index=False)
     predictions.to_csv(output_dir / "test_predictions.csv", index=False)
     feature_importance.to_csv(output_dir / "top_feature_importance.csv", index=False)
+    if not current_scores.empty:
+        current_scores.to_csv(output_dir / "current_scores.csv", index=False)
     if not survival_summary.empty:
         survival_summary.to_csv(output_dir / "survival_summary.csv", index=False)
     with (output_dir / "run_summary.json").open("w", encoding="utf-8") as handle:
@@ -730,6 +849,7 @@ def write_outputs_to_database(
     metrics: pd.DataFrame,
     predictions: pd.DataFrame,
     feature_importance: pd.DataFrame,
+    current_scores: pd.DataFrame,
     survival_summary: pd.DataFrame,
 ) -> None:
     connection = duckdb.connect(database)
@@ -747,6 +867,11 @@ def write_outputs_to_database(
         connection.execute(
             f"create or replace table {schema}.python_churn_feature_importance as select * from feature_importance_df"
         )
+        if not current_scores.empty:
+            connection.register("current_scores_df", current_scores)
+            connection.execute(
+                f"create or replace table {schema}.python_churn_current_scores as select * from current_scores_df"
+            )
         if not survival_summary.empty:
             connection.register("survival_summary_df", survival_summary)
             connection.execute(
@@ -768,7 +893,7 @@ def main() -> None:
     else:
         dataset = load_ibm_telco_dataset()
 
-    metrics, predictions, feature_importance, summary, calibrated_estimator = run_model_benchmark(
+    metrics, predictions, feature_importance, current_scores, summary, calibrated_estimator = run_model_benchmark(
         dataset=dataset,
         output_dir=output_dir,
         random_state=args.random_state,
@@ -782,6 +907,7 @@ def main() -> None:
         metrics=metrics,
         predictions=predictions,
         feature_importance=feature_importance,
+        current_scores=current_scores,
         survival_summary=survival_summary,
         summary=summary,
         calibrated_estimator=calibrated_estimator,
@@ -793,6 +919,7 @@ def main() -> None:
             metrics=metrics,
             predictions=predictions,
             feature_importance=feature_importance,
+            current_scores=current_scores,
             survival_summary=survival_summary,
         )
 

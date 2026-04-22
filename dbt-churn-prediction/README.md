@@ -59,7 +59,7 @@ Think of them like this:
 
 - `fct_customer_features_historical` is the training input
 - `fct_customer_churn_labels` is the training target
-- `fct_customer_churn_scores_daily` is the current prediction dataset
+- `fct_customer_churn_scores_daily` is the warehouse-side baseline score for the current eligible population
 
 If you want to inspect the current score table:
 
@@ -126,6 +126,10 @@ The main files are:
 - `run_summary.json`
 - `best_model.joblib`
 
+If you train on your own dbt dataset, the script also writes:
+
+- `current_scores.csv`
+
 ### what the metrics mean
 
 The most useful fields are:
@@ -158,18 +162,24 @@ The script refuses to train on the tiny bundled sample through this path because
 
 Once you have a trained model, the final step is prediction.
 
-In practice, prediction means taking the current customer feature table and assigning each row a churn probability. In this repo, the current-day feature and score output is centered on:
+In practice, prediction means taking the current customer feature table and assigning each row a churn probability.
+
+There are two prediction outputs in this repo.
+
+The first is `fct_customer_churn_scores_daily`. That table is built in dbt and gives you a simple warehouse-side score for the current eligible population.
+
+The second is the Python model output. When you train on your own dbt dataset with `--source dbt`, the script scores the current eligible feature table and writes a `current_scores.csv` artifact. If you also pass a database path, it writes those current predictions back into the database as a table.
+
+The warehouse-side current score table is:
 
 ```text
 fct_customer_churn_scores_daily
 ```
 
-That table is the current prediction layer for the eligible customer population.
-
 If you want Python model outputs written back into DuckDB as tables, run:
 
 ```sh
-uv run python scripts/train_python_churn_models.py --source ibm_telco --database local.db --write-schema science
+uv run python scripts/train_python_churn_models.py --source dbt --database local.db --write-schema science
 ```
 
 That creates prediction and metric tables in the selected schema.
@@ -198,7 +208,7 @@ Then write prediction outputs back to MotherDuck:
 
 ```sh
 uv run python scripts/train_python_churn_models.py \
-  --source ibm_telco \
+  --source dbt \
   --database "md:${MOTHERDUCK_DATABASE}" \
   --write-schema science
 ```
@@ -235,10 +245,16 @@ Train the model:
 uv run python scripts/train_python_churn_models.py --source ibm_telco
 ```
 
-Inspect the current predictions:
+Inspect the current warehouse-side score table:
 
 ```sh
 uv run dbt show --profiles-dir . --select fct_customer_churn_scores_daily
+```
+
+If you want current predictions from the trained Python model on your own dbt data, run:
+
+```sh
+uv run python scripts/train_python_churn_models.py --source dbt --database local.db
 ```
 
 That is the core workflow this example is meant to teach.
