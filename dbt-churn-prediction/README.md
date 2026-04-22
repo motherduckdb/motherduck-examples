@@ -1,149 +1,180 @@
-# dbt churn prediction with MotherDuck native storage
+# churn prediction with Python ML
 
-This example shows how to build a SQL-first churn prediction workflow using dbt, DuckDB, and MotherDuck native storage.
+This example shows a simple churn workflow in the order most teams actually use it:
 
-The sample business is a subscription company with subscription members and pay-per-use customers across a few regions. The dbt project builds clean source models, derives subscription history, creates daily churn features, applies a transparent SQL scorecard, and publishes a retention queue that a marketing or operations team can act on.
+1. create a dataset
+2. train a model
+3. predict churn for the current customer population
 
-The example is intentionally compact. It is meant to be copied, understood, and modified without introducing a separate ML platform.
+The repo includes dbt models to shape customer history into features and labels, and a Python script to train and evaluate the model. By default, the Python script uses the IBM Telco churn dataset so you can run it immediately. If you later replace the sample data with your own larger historical dataset, you can train on your own dbt-built tables instead.
 
-## What this example does
+## before you start
 
-- Loads small sample source tables with `dbt seed`
-- Cleans customer, membership, usage event, and payment data in staging models
-- Builds subscription episodes with churn and right-censoring fields
-- Creates daily customer features for churn scoring
-- Creates historical churn labels for model review or future training
-- Scores churn risk in dbt SQL using observed segment churn rates and interpretable rules
-- Publishes a business-facing retention queue with reasons and recommended actions
-- Runs locally with DuckDB or in MotherDuck native storage
+Write down what churn means in your business. For example, you might define churn as a cancellation in the next 30 days, or no return activity in the next 60 days. That definition becomes the target your model will learn.
 
-This example does not use DuckLake or external object storage. In the MotherDuck target, the raw seed tables and dbt models are regular MotherDuck tables.
+For churn modeling, you usually need four kinds of source data:
 
-## Modeling approach
+- a customer table with one row per customer
+- a subscription or contract table
+- an activity or usage table
+- a payment or billing table
 
-This project uses an explainable risk scoring model, implemented entirely in SQL.
+You do not need a perfect schema to start. You need a clean one.
 
-The daily score table combines two interpretable signals:
+## step 1: install the project
+
+Install the dependencies:
+
+```sh
+uv sync
+```
+
+This installs dbt, DuckDB, pandas, scikit-learn, lifelines, and the rest of the packages used in the example.
+
+## step 2: create the dataset
+
+The first job is not training. It is building a dataset the model can learn from.
+
+In this repo, the dataset is built in dbt. The sample data is loaded with seeds, then dbt creates staged tables, historical labels, historical features, and a current-day scoring table.
+
+Load the sample data:
+
+```sh
+uv run dbt seed --profiles-dir . --full-refresh
+```
+
+Build the dataset:
+
+```sh
+uv run dbt build --profiles-dir . --exclude resource_type:seed
+```
+
+After this step, the most important tables are:
+
+- `fct_customer_features_historical`
+- `fct_customer_churn_labels`
+- `fct_customer_churn_scores_daily`
+
+Think of them like this:
+
+- `fct_customer_features_historical` is the training input
+- `fct_customer_churn_labels` is the training target
+- `fct_customer_churn_scores_daily` is the current prediction dataset
+
+If you want to inspect the current score table:
+
+```sh
+uv run dbt show --profiles-dir . --select fct_customer_churn_scores_daily
+```
+
+### what the training dataset means
+
+Each row in the historical feature table represents one customer at one snapshot date. The columns describe what was known about that customer on that date. Those columns are the features.
+
+The label table tells you whether that same customer churned after the snapshot date. That is the target.
+
+This time split matters. Features come from the snapshot date. Labels come from the future. That is what makes the training setup valid.
+
+### what features usually look like
+
+Common churn features include:
+
+- days since last activity
+- number of events in the last 30, 60, or 90 days
+- spend in recent windows
+- failed payments
+- complaints
+- customer tenure
+- renewal status
+
+In this repo, those fields are already built for you in the dbt models.
+
+## step 3: train the model
+
+Once the dataset exists, you can train the model.
+
+Start with logistic regression. It is the right first model for churn because churn is usually a binary target, and logistic regression gives you a probability rather than only a yes or no answer.
+
+Run the training script on the IBM Telco dataset:
+
+```sh
+uv run python scripts/train_python_churn_models.py --source ibm_telco
+```
+
+The script does the following:
+
+1. loads the dataset
+2. prepares the target column
+3. splits the data into train, validation, and test sets
+4. preprocesses numeric and categorical columns
+5. trains logistic regression and a few comparison models
+6. picks the best model on validation data
+7. calibrates the selected model
+8. evaluates it on the test set
+
+The outputs are written under:
 
 ```text
-observed_churn_rate =
-  historical churned customers / historical labeled customers
-
-risk_score =
-  matched risk-rule points
-  + observed_churn_rate adjustment
+artifacts/python_models/
 ```
 
-The risk rules live in `seeds/churn_risk_rules.csv`, which makes the scoring logic easy to review, version, and replace. A rule can represent an explainable signal such as failed payment, manual renewal risk, long engagement gap, recent complaint, declining usage, or low satisfaction. The important design choice is that daily scoring remains simple SQL in dbt.
+The main files are:
 
-The subscription modeling uses survival-analysis concepts without requiring Python runtime scoring:
+- `model_metrics.csv`
+- `test_predictions.csv`
+- `top_feature_importance.csv`
+- `run_summary.json`
+- `best_model.joblib`
 
-- `fct_subscription_history` represents each membership as an episode.
-- Active subscriptions are right-censored at `churn_as_of_date`.
-- Expired non-active subscriptions use a configurable grace period before being treated as churned.
-- Subscription-start attributes such as plan length, payment method, acquisition channel, and auto-renewal are preserved for feature engineering.
-- `prior_memberships` captures whether a customer is on a first subscription or a reactivated subscription.
+### what the metrics mean
 
-This approach works well for operational churn workflows because it is explainable, portable, and easy to schedule. It also gives data science teams a clean foundation for later cohort analysis, survival analysis, or more advanced modeling.
+The most useful fields are:
 
-## Why use this approach
+- `roc_auc`, which tells you how well the model ranks churners above non-churners
+- `average_precision`, which is useful when churn is imbalanced
+- `brier_score`, which tells you whether the probabilities are calibrated
 
-Churn workflows often fail because the prediction is disconnected from the operational table the business needs. This example keeps the full path in one dbt graph:
+The model also produces a churn probability for each test row. That probability is usually more useful than a hard yes or no prediction because it lets you rank customers by risk.
 
-- source data
-- subscription history
-- churn labels
-- daily features
-- daily scores
-- retention queue
+## step 4: train on your own data
 
-That makes the logic inspectable and testable. It also means BI tools, reverse ETL jobs, agents, or applications can query the same MotherDuck tables directly.
+After you understand the IBM benchmark, switch to your own history.
 
-The scorecard is deliberately not a black box. Operators can see why a customer appears in the queue: failed payment, manual renewal risk, complaint, long engagement gap, or no recent usage events.
+To do that, replace the sample source data with your own customer, subscription, activity, and payment data, then rebuild dbt:
 
-## Churn definitions
+```sh
+uv run dbt build --profiles-dir . --exclude resource_type:seed
+```
 
-The example separates two customer behaviors:
+When your historical dataset is large enough, train on the dbt-built feature matrix:
 
-- `member`: subscription customers. The example scores 30-day churn risk.
-- `casual`: pay-per-use customers. The example scores 60-day no-return risk.
+```sh
+uv run python scripts/train_python_churn_models.py --source dbt --database local.db
+```
 
-Casual customers are scored only after they have enough history:
+The script refuses to train on the tiny bundled sample through this path because the sample is too small for useful machine learning. That check is intentional.
 
-- at least 2 usage events in the last 120 days, or
-- at least 3 usage events in the last 180 days
+## step 5: predict churn
 
-That rule keeps one-time users or buyers from filling the retention queue.
+Once you have a trained model, the final step is prediction.
 
-For members, the project models subscription episodes and uses `member_churn_grace_period_days` from `dbt_project.yml`. The default grace period is 30 days.
-
-## Project structure
+In practice, prediction means taking the current customer feature table and assigning each row a churn probability. In this repo, the current-day feature and score output is centered on:
 
 ```text
-dbt-churn-prediction/
-+-- dbt_project.yml
-+-- profiles.yml
-+-- seeds/
-|   +-- raw_customers.csv
-|   +-- raw_memberships.csv
-|   +-- raw_usage_events.csv
-|   +-- raw_payments.csv
-|   +-- churn_risk_rules.csv
-+-- models/
-|   +-- staging/
-|   |   +-- _sources.yml
-|   |   +-- stg_customers.sql
-|   |   +-- stg_memberships.sql
-|   |   +-- stg_usage_events.sql
-|   |   +-- stg_payments.sql
-|   +-- marts/
-|       +-- fct_subscription_history.sql
-|       +-- fct_customer_features_daily.sql
-|       +-- fct_customer_churn_labels.sql
-|       +-- fct_customer_churn_scores_daily.sql
-|       +-- mart_retention_queue_daily.sql
-+-- tests/
-    +-- assert_one_feature_row_per_customer_per_day.sql
-    +-- assert_one_score_row_per_customer_per_day.sql
-    +-- assert_risk_scores_between_zero_and_100.sql
-    +-- assert_segment_rates_between_zero_and_one.sql
-    +-- assert_casual_scores_are_eligible.sql
-    +-- assert_subscription_duration_positive.sql
-    +-- assert_subscription_censoring_consistent.sql
+fct_customer_churn_scores_daily
 ```
 
-## Data flow
+That table is the current prediction layer for the eligible customer population.
 
-```mermaid
-graph TB
-    A[Raw subscription data] --> B[dbt staging models]
-    B --> S[Subscription history]
-    S --> C[Daily customer features]
-    B --> D[Historical churn labels]
-    C --> E[SQL churn scorecard]
-    E --> F[Retention queue]
+If you want Python model outputs written back into DuckDB as tables, run:
 
-    subgraph "MotherDuck native storage"
-        A
-        B
-        S
-        C
-        D
-        E
-        F
-    end
+```sh
+uv run python scripts/train_python_churn_models.py --source ibm_telco --database local.db --write-schema science
 ```
 
-For the sample, `dbt seed` creates the raw tables. In a real workflow, an ingestion tool such as dlt, Airbyte, Fivetran, custom Python, or application exports can land equivalent tables in the raw schema. dbt owns the transformation, labeling, scoring, tests, and mart tables.
+That creates prediction and metric tables in the selected schema.
 
-## Prerequisites
-
-- Python 3.12+
-- `uv` or another Python environment manager
-- A MotherDuck account and token for the `prod` target
-- DuckDB is pinned in `pyproject.toml` so the local package matches the MotherDuck-supported extension version
-
-Copy the example environment file when you want to run against MotherDuck:
+If you want to predict against MotherDuck instead of local DuckDB, set up `.env` first:
 
 ```sh
 cp .env.example .env
@@ -156,165 +187,58 @@ MOTHERDUCK_TOKEN=your_token_here
 MOTHERDUCK_DATABASE=subscription_churn
 ```
 
-## Run locally with DuckDB
-
-Install dependencies:
-
-```sh
-uv sync
-```
-
-Load the sample raw tables:
-
-```sh
-uv run dbt seed --profiles-dir . --full-refresh
-```
-
-Build models and run tests:
-
-```sh
-uv run dbt build --profiles-dir . --exclude resource_type:seed
-```
-
-Inspect the action queue:
-
-```sh
-uv run dbt show --profiles-dir . --select mart_retention_queue_daily
-```
-
-The local target writes to `local.db`.
-
-## Run in MotherDuck
-
-Create the MotherDuck database once:
-
-```sql
-CREATE DATABASE IF NOT EXISTS subscription_churn;
-```
-
-Set a MotherDuck token:
-
-```sh
-set -a
-source .env
-set +a
-```
-
-Load the sample raw tables into MotherDuck native storage:
+Build in MotherDuck:
 
 ```sh
 uv run dbt seed --profiles-dir . --target prod --full-refresh
-```
-
-Build and test the churn graph:
-
-```sh
 uv run dbt build --profiles-dir . --target prod --select tag:churn_daily+ --exclude resource_type:seed
 ```
 
-Inspect the queue:
+Then write prediction outputs back to MotherDuck:
 
 ```sh
-uv run dbt show --profiles-dir . --target prod --select mart_retention_queue_daily
+uv run python scripts/train_python_churn_models.py \
+  --source ibm_telco \
+  --database "md:${MOTHERDUCK_DATABASE}" \
+  --write-schema science
 ```
 
-## Main outputs
+## if you are using your own data
 
-All models and seeds have table and column descriptions in YAML, and `persist_docs` is enabled in `dbt_project.yml`. When the adapter supports it, dbt writes those descriptions as relation and column comments in DuckDB or MotherDuck.
+Use this order:
 
-Those comments are useful for AI agents and BI assistants. They help tools inspect the catalog, understand the grain and meaning of each field, and generate safer SQL against the churn tables.
+1. define churn
+2. clean the raw customer history
+3. build historical features
+4. build historical labels
+5. train the model
+6. review the metrics
+7. score the current customer population
 
-`fct_subscription_history` has one row per subscription episode:
+Do not skip straight to training. If the dataset is wrong, the model will be wrong too.
 
-- `started_at`, `ended_at`, `duration_days`
-- `churned` and `is_censored`
-- `prior_memberships`
-- initial subscription attributes for plan, payment method, auto-renewal, and acquisition channel
+## the shortest possible path
 
-`fct_customer_features_daily` has one row per `customer_id` and `as_of_date`. It includes stable, explainable features:
+If you just want the fastest end-to-end run:
 
-- recency: `days_since_last_event`
-- frequency: `events_30d`, `events_60d`, `events_90d`
-- monetary: `spend_90d`
-- membership risk: `failed_payments_30d`, `days_until_renewal`, `membership_age_days`, `prior_memberships`, `is_auto_renew`
-- experience: `complaints_60d`, `avg_satisfaction_60d`
-- eligibility: `is_eligible_for_scoring`
-
-`fct_customer_churn_labels` demonstrates label generation for historical evaluation:
-
-- members churn over a 30-day horizon
-- casual customers churn when they are eligible and do not return in 60 days
-
-`fct_churn_segment_rates` calculates observed historical churn rates by segment and prediction window.
-
-`fct_customer_churn_scores_daily` applies the risk rules, joins observed segment churn rates, and returns one scored row per eligible customer per scoring date.
-
-`mart_retention_queue_daily` is the business-facing table:
-
-- `queue_rank`
-- `customer_id`
-- `segment`
-- `observed_churn_rate`
-- `risk_score`
-- `risk_band`
-- `top_reason_1`, `top_reason_2`, `top_reason_3`
-- `recommended_action`
-- `offer_type`
-
-## Use this with your data
-
-Start by mapping your own data to the four raw tables used in this example:
-
-- `raw_customers`: one row per customer
-- `raw_memberships`: one row per subscription or membership episode
-- `raw_usage_events`: one row per customer usage event, purchase event, or product activity event
-- `raw_payments`: one row per payment attempt
-
-If your use case is not subscription-based, keep the model structure and replace the domain-specific fields:
-
-- Replace usage events with product sessions, orders, invoices, appointments, or other activity events.
-- Replace complaints with support tickets, refunds, low NPS, failed jobs, or negative product outcomes.
-- Replace memberships with contracts, plans, subscriptions, accounts, or seats.
-- Replace regions with workspace, account owner, plan, geography, or customer segment.
-
-Then update these parts:
-
-1. Update `models/staging/_sources.yml` if your raw table names differ.
-2. Update the staging models to cast and normalize your source fields.
-3. Update `fct_subscription_history` if your churn definition uses a different grace period or renewal rule.
-4. Update `fct_customer_features_daily` with the features that matter in your business.
-5. Replace `churn_risk_rules.csv` with risk rules, point values, reasons, and actions that match your use case.
-6. Update the labels in `fct_customer_churn_labels` to match the horizon your team cares about.
-7. Keep the mart output focused on the action queue your team will actually use.
-
-For production runs, schedule:
+Create the dataset:
 
 ```sh
-dbt seed --target prod --full-refresh
-dbt build --target prod --select tag:churn_daily+ --exclude resource_type:seed
+uv sync
+uv run dbt seed --profiles-dir . --full-refresh
+uv run dbt build --profiles-dir . --exclude resource_type:seed
 ```
 
-If raw data is loaded by an ingestion job instead of dbt seeds, schedule only the `dbt build` command after the raw data load completes.
+Train the model:
 
-## Tests included
+```sh
+uv run python scripts/train_python_churn_models.py --source ibm_telco
+```
 
-This example includes schema tests and singular tests for:
+Inspect the current predictions:
 
-- unique source and staging keys
-- accepted status and segment values
-- one feature row per customer per date
-- one score row per customer per date
-- observed segment churn rates between 0 and 1
-- risk scores between 0 and 100
-- casual customers only scored when eligible
-- positive subscription durations
-- consistent subscription churn and censoring flags
+```sh
+uv run dbt show --profiles-dir . --select fct_customer_churn_scores_daily
+```
 
-Add use-case-specific tests before using the model operationally, especially around source freshness, label leakage, consent rules, and offer eligibility.
-
-## Notes and limits
-
-- The included risk rules and points are example values, not calibrated thresholds for your business.
-- The score is designed for explainability and fast adoption, not maximum predictive accuracy.
-- Do not send retention offers directly from this table without consent, compliance, and suppression logic.
-- For a larger deployment, keep daily scoring in SQL and periodically review observed churn rates, rule thresholds, and action outcomes.
+That is the core workflow this example is meant to teach.
