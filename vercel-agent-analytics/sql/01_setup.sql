@@ -1,5 +1,7 @@
--- Run this once in the MotherDuck SQL UI. Creates the schema + table the
--- Vercel Function writes to.
+-- Reference copy of the schema. The Vercel Function runs this DDL
+-- automatically on its first cold start (see src/db.ts), so you do not need
+-- to execute this file manually. Kept here for readers who want the schema
+-- at a glance or want to run it by hand in a local DuckDB session.
 --
 -- Collector env vars:
 --   MD_DESTINATION=agent_analytics.raw

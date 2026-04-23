@@ -28,17 +28,59 @@ let connPromise: Promise<DuckDBConnection> | null = null;
 export function getConnection(): Promise<DuckDBConnection> {
   if (!connPromise) {
     connPromise = (async () => {
-      const instance = await DuckDBInstance.fromCache(`md:${DATABASE}`, {
+      // Connect without a default database so CREATE DATABASE IF NOT EXISTS
+      // works on the very first cold start.
+      const instance = await DuckDBInstance.fromCache(`md:`, {
         motherduck_token: TOKEN!,
         extension_directory: EXTENSION_DIRECTORY,
       });
-      return instance.connect();
+      const conn = await instance.connect();
+      await ensureSchema(conn);
+      return conn;
     })().catch((err) => {
       connPromise = null;
       throw err;
     });
   }
   return connPromise;
+}
+
+// Idempotent bootstrap: creates the database, schema, table, and
+// `ai_requests` view if they are missing. Mirrors sql/01_setup.sql.
+async function ensureSchema(conn: DuckDBConnection): Promise<void> {
+  const db = quoteIdent(DATABASE);
+  const schema = quoteIdent(SCHEMA);
+  const table = quoteIdent(TABLE);
+  await conn.run(`CREATE DATABASE IF NOT EXISTS ${db}`);
+  await conn.run(`USE ${db}`);
+  await conn.run(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
+  await conn.run(`
+    CREATE TABLE IF NOT EXISTS ${db}.${schema}.${table} (
+      event_id        VARCHAR,
+      received_at     TIMESTAMP,
+      event_ts        TIMESTAMP,
+      event_hour      TIMESTAMP,
+      project_id      VARCHAR,
+      deployment_id   VARCHAR,
+      source          VARCHAR,
+      host            VARCHAR,
+      path            VARCHAR,
+      method          VARCHAR,
+      status_code     INTEGER,
+      user_agent      VARCHAR,
+      referer         VARCHAR,
+      client_ip       VARCHAR,
+      region          VARCHAR,
+      request_id      VARCHAR,
+      ai_category     VARCHAR,
+      ai_name         VARCHAR,
+      raw             JSON
+    )
+  `);
+  await conn.run(`
+    CREATE OR REPLACE VIEW ${db}.${schema}."ai_requests" AS
+    SELECT * FROM ${db}.${schema}.${table} WHERE ai_category IS NOT NULL
+  `);
 }
 
 export interface LogRow {

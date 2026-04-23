@@ -41,7 +41,7 @@ vercel-agent-analytics/
     local-server.ts      dev harness
   bots.yaml              classifier patterns
   sql/
-    01_setup.sql         create the schema and table
+    01_setup.sql         reference DDL (the function runs this automatically)
     02_dive_queries.sql  starter queries for a Dive
   scripts/
     sample-payload.ndjson example batch
@@ -57,13 +57,7 @@ vercel-agent-analytics/
 
 ## Setup
 
-### 1. Create the destination table
-
-Open the MotherDuck SQL UI and run `sql/01_setup.sql`. It creates `agent_analytics.raw.vercel_request_logs` and a convenience `raw.ai_requests` view.
-
-If you want a different destination, set `MD_DESTINATION=<database>.<schema>` and `MD_TABLE=<table>` on the function, then update the SQL files to match before running them.
-
-### 2. Deploy the function
+### 1. Deploy the function
 
 ```bash
 cd vercel-agent-analytics
@@ -85,7 +79,9 @@ Set the required environment variables in the Vercel project settings:
 
 `vercel deploy` prints the function URL: `https://<project>.vercel.app/api/drain`.
 
-### 3. Point Vercel at the function
+On the first request, the function runs `CREATE DATABASE IF NOT EXISTS`, `CREATE SCHEMA IF NOT EXISTS`, `CREATE TABLE IF NOT EXISTS`, and `CREATE OR REPLACE VIEW` against whatever destination you configured, so no manual SQL step is needed. The same DDL is in `sql/01_setup.sql` for reference or local use.
+
+### 2. Point Vercel at the function
 
 Vercel dashboard : Project : Settings : Log Drains : Add.
 
@@ -93,7 +89,7 @@ Vercel dashboard : Project : Settings : Log Drains : Add.
 - Endpoint: the `/api/drain` URL from step 2
 - Custom secret: the same string you set as `VERCEL_DRAIN_SECRET`
 
-### 4. Verify
+### 3. Verify
 
 ```bash
 # local test
