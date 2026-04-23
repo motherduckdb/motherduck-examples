@@ -3,7 +3,6 @@
   "functions": {
     "api/drain.ts": {
       "maxDuration": 30,
-      "memory": 1024,
       "includeFiles": "bots.yaml"
     }
   }

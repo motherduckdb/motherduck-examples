@@ -1,17 +1,34 @@
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { handleDrain } from "../src/handler.js";
 
 export const config = {
   runtime: "nodejs",
 };
 
-export default async function handler(req: Request): Promise<Response> {
+export default async function handler(
+  req: IncomingMessage,
+  res: ServerResponse
+): Promise<void> {
   if (req.method !== "POST") {
-    return new Response("method not allowed", { status: 405 });
+    res.statusCode = 405;
+    res.end("method not allowed");
+    return;
   }
 
-  const rawBody = await req.text();
-  const signature = req.headers.get("x-vercel-signature") ?? undefined;
+  const rawBody = await readBody(req);
+  const sigHeader = req.headers["x-vercel-signature"];
+  const signature = Array.isArray(sigHeader) ? sigHeader[0] : sigHeader;
 
   const { status, body } = await handleDrain(rawBody, signature);
-  return new Response(body, { status });
+  res.statusCode = status;
+  res.end(body);
+}
+
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (c: Buffer) => chunks.push(c));
+    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    req.on("error", reject);
+  });
 }

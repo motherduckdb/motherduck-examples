@@ -1,7 +1,11 @@
 -- Starter queries for a MotherDuck Dive. Each block is one tile.
--- Run against dumky_share.raw.vercel_request_logs.
+-- Run against the same destination configured on the collector:
+--   MD_DESTINATION=agent_analytics.raw
+--   MD_TABLE=vercel_request_logs
+-- If you changed either value, replace the database/schema/table identifiers
+-- in this file before saving it as a Dive.
 
-USE dumky_share;
+USE agent_analytics;
 
 ---------------------------------------------------------------------
 -- Live counter: AI requests in the last 5 minutes

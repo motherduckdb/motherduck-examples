@@ -1,14 +1,21 @@
 import { DuckDBInstance, DuckDBConnection } from "@duckdb/node-api";
 
 const TOKEN = process.env.MOTHERDUCK_TOKEN;
-const DATABASE = process.env.MD_DATABASE ?? "dumky_share";
-const SCHEMA = process.env.MD_SCHEMA ?? "raw";
+const { database: DATABASE, schema: SCHEMA } = resolveDestination();
 const TABLE = process.env.MD_TABLE ?? "vercel_request_logs";
+const HOME = process.env.HOME?.trim() || "/tmp";
+const EXTENSION_DIRECTORY =
+  process.env.DUCKDB_EXTENSION_DIRECTORY ?? `${HOME}/.duckdb/extensions`;
 
 if (!TOKEN) {
   // Fail fast at cold start rather than on the first request.
   throw new Error("MOTHERDUCK_TOKEN is required");
 }
+
+// Vercel's Node runtime can present HOME as unset/empty. MotherDuck needs a
+// writable extension cache, so pin both HOME and the extension directory to
+// the writable temp volume before DuckDB initializes.
+process.env.HOME = HOME;
 
 // Fully qualified target, escaped to survive schema/table names with unusual
 // characters. Built once; env vars are read at cold start.
@@ -23,6 +30,7 @@ export function getConnection(): Promise<DuckDBConnection> {
     connPromise = (async () => {
       const instance = await DuckDBInstance.fromCache(`md:${DATABASE}`, {
         motherduck_token: TOKEN!,
+        extension_directory: EXTENSION_DIRECTORY,
       });
       return instance.connect();
     })().catch((err) => {
@@ -105,4 +113,26 @@ function sqlTs(d: Date): string {
 
 function quoteIdent(id: string): string {
   return `"${id.replace(/"/g, '""')}"`;
+}
+
+function resolveDestination(): { database: string; schema: string } {
+  const destination = process.env.MD_DESTINATION?.trim();
+  if (!destination) {
+    return {
+      database: process.env.MD_DATABASE ?? "agent_analytics",
+      schema: process.env.MD_SCHEMA ?? "raw",
+    };
+  }
+
+  const parts = destination.split(".");
+  if (parts.length !== 2 || parts.some((part) => part.length === 0)) {
+    throw new Error(
+      "MD_DESTINATION must be in the form <database>.<schema>, e.g. agent_analytics.raw"
+    );
+  }
+
+  return {
+    database: parts[0]!,
+    schema: parts[1]!,
+  };
 }

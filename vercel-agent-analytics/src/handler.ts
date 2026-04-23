@@ -7,6 +7,29 @@ if (!DRAIN_SECRET) {
   throw new Error("VERCEL_DRAIN_SECRET is required");
 }
 
+const IGNORED_PATH_EXTENSIONS = new Set([
+  ".avif",
+  ".bmp",
+  ".css",
+  ".eot",
+  ".gif",
+  ".ico",
+  ".jpeg",
+  ".jpg",
+  ".js",
+  ".map",
+  ".mjs",
+  ".otf",
+  ".png",
+  ".svg",
+  ".ttf",
+  ".tif",
+  ".tiff",
+  ".webp",
+  ".woff",
+  ".woff2",
+]);
+
 // When true, only rows classified as crawler / agent / human_via_ai are
 // persisted. Human direct traffic is dropped. Keeps the table small on
 // high-volume sites where you only care about AI traffic.
@@ -71,6 +94,11 @@ function parseAndClassify(body: string): LogRow[] {
 
     const eventTs = parseTimestamp(line.timestamp) ?? now;
     const { category, name } = classify(userAgent, referer);
+    const path = pickString(line, ["proxy.path", "path"]);
+
+    if (shouldSkipPath(path)) {
+      continue;
+    }
 
     rows.push({
       event_id: asString(line.id),
@@ -81,12 +109,12 @@ function parseAndClassify(body: string): LogRow[] {
       deployment_id: asString(line.deploymentId),
       source: asString(line.source),
       host: pickString(line, ["proxy.host", "host"]),
-      path: pickString(line, ["proxy.path", "path"]),
+      path,
       method: pickString(line, ["proxy.method", "method"]),
       status_code: pickNumber(line, ["proxy.statusCode", "statusCode"]),
       user_agent: userAgent,
       referer,
-      client_ip: pickString(line, ["proxy.clientIp", "clientIp"]),
+      client_ip: anonymizeIp(pickString(line, ["proxy.clientIp", "clientIp"])),
       region: asString(line.region),
       request_id: pickString(line, ["proxy.requestId", "requestId"]),
       ai_category: category,
@@ -130,6 +158,11 @@ function pickString(obj: Record<string, unknown>, paths: string[]): string | nul
   for (const p of paths) {
     const v = pathLookup(obj, p);
     if (typeof v === "string" && v.length > 0) return v;
+    if (Array.isArray(v)) {
+      for (const item of v) {
+        if (typeof item === "string" && item.length > 0) return item;
+      }
+    }
   }
   return null;
 }
@@ -154,4 +187,39 @@ function parseTimestamp(v: unknown): Date | null {
     return Number.isNaN(d.getTime()) ? null : d;
   }
   return null;
+}
+
+function shouldSkipPath(path: string | null): boolean {
+  if (!path) return false;
+
+  const normalizedPath = path.split("?")[0]?.split("#")[0] ?? path;
+  const lowerPath = normalizedPath.toLowerCase();
+
+  if (lowerPath === "/_next/image") {
+    return true;
+  }
+
+  for (const ext of IGNORED_PATH_EXTENSIONS) {
+    if (lowerPath.endsWith(ext)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function anonymizeIp(ip: string | null): string | null {
+  if (ip === null) return null;
+
+  const parts = ip.split(".");
+  if (parts.length !== 4) {
+    return ip;
+  }
+
+  const octets = parts.map((part) => Number(part));
+  if (octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+    return ip;
+  }
+
+  return `${octets[0]}.${octets[1]}.${octets[2]}.0`;
 }
