@@ -50,7 +50,7 @@ Or browse the available starter projects below. Each folder contains a complete,
 - **[templates/flights/dbt-runner](templates/flights/dbt-runner)** - Reusable Flight template that clones a dbt project, writes a runtime profile, runs dbt, and records an audit row
 - **[templates/dives](templates/dives)** - Reserved location for reusable Dive templates
 
-Template-backed recipes are checked by [`scripts/check-flight-template-sync.py`](scripts/check-flight-template-sync.py) so example Flight source stays in sync with the reusable template.
+Template-backed recipes are checked by [`scripts/check-flight-template-sync.py`](scripts/check-flight-template-sync.py) so example Flight source stays in sync with the reusable template. Metadata is checked by [`scripts/check-meta.py`](scripts/check-meta.py).
 
 ## Getting a starter project
 
@@ -108,7 +108,18 @@ metadata_version: 1
 id: dbt-ingestion-s3
 kind: recipe
 title: Build Hacker News models from S3 with dbt
+description: Query public Hacker News Parquet data in S3 and build dbt models.
+features:
+  - flights
+categories:
+  - ingestion
+  - transformation
+tags:
+  - dbt
+  - s3
 standalone: true
+entrypoints:
+  docs: README.md
 ```
 
 Template metadata uses:
@@ -118,4 +129,28 @@ metadata_version: 1
 id: dbt-runner
 kind: flight_template
 title: dbt Runner
+description: Run a dbt project from a Flight.
+features:
+  - flights
+categories:
+  - transformation
+tags:
+  - dbt
+entrypoints:
+  source: flight.py
+  requirements: requirements.txt
+```
+
+Use `features` only for MotherDuck features that can drive product surfaces:
+`dives`, `ducklake`, `flights`, `pg_endpoint`, and `wasm`.
+
+Use `categories` from the fixed cookbook taxonomy:
+`analytics`, `application`, `ingestion`, `lakehouse`, `machine-learning`,
+`orchestration`, and `transformation`.
+
+Use `tags` for third-party tools, datasets, and topics, such as `dbt`, `s3`, or
+`hacker-news`. Validate metadata with:
+
+```bash
+uv run scripts/check-meta.py
 ```

@@ -27,6 +27,14 @@ id: dbt-runner
 kind: flight_template
 title: dbt Runner
 description: Run a dbt project from a Flight.
+features:
+  - flights
+categories:
+  - transformation
+tags:
+  - dbt
 ```
 
 Recipe folders use the same `meta.yml` filename with `kind: recipe`.
+Use `features` for MotherDuck UI surfaces, `categories` for the fixed cookbook
+taxonomy, and `tags` for third-party tools or datasets.

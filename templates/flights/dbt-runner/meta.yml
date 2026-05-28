@@ -3,13 +3,13 @@ id: dbt-runner
 kind: flight_template
 title: dbt Runner
 description: Clone a dbt project, write a runtime MotherDuck profile, run dbt, and record an audit row.
-products:
+features:
   - flights
-  - dbt
-  - motherduck
 categories:
   - transformation
   - orchestration
+tags:
+  - dbt
 entrypoints:
   source: flight.py
   requirements: requirements.txt

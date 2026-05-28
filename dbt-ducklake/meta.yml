@@ -3,9 +3,7 @@ id: dbt-ducklake
 kind: recipe
 title: Run TPC-DS models on DuckLake with dbt
 description: Load TPC-DS data into a DuckLake-backed dbt project and run the dbt build locally or from an on-demand Flight.
-products:
-  - motherduck
-  - dbt
+features:
   - flights
   - ducklake
 categories:
@@ -13,12 +11,11 @@ categories:
   - lakehouse
   - orchestration
 tags:
-  - ducklake
+  - dbt
   - tpc-ds
-  - dbt-duckdb
 standalone: true
 entrypoints:
-  local: README.md
+  docs: README.md
   flight: flights/create_flight.sql
   flight_source: flights/flight.py
 templates:

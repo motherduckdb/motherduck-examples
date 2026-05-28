@@ -3,21 +3,19 @@ id: dbt-churn-prediction
 kind: recipe
 title: Build churn prediction features with dbt
 description: Use dbt to build churn feature tables and run the feature refresh locally, in MotherDuck, or from a scheduled Flight.
-products:
-  - motherduck
-  - dbt
+features:
   - flights
 categories:
   - transformation
   - machine-learning
   - orchestration
 tags:
+  - dbt
   - churn
   - feature-engineering
-  - dbt-duckdb
 standalone: true
 entrypoints:
-  local: README.md
+  docs: README.md
   flight: flights/create_flight.sql
   flight_source: flights/flight.py
 templates:
