@@ -2,6 +2,8 @@
 
 Ready-to-use starter projects for building with MotherDuck: self-contained, copy-or-clone projects with setup instructions, dependencies, and example code—perfect for bootstrapping your next MotherDuck project.
 
+This repository is also evolving into a cookbook for MotherDuck recipes and templates. Recipe folders remain standalone starter projects. Shared assets, such as Flight and Dive templates, live under [`templates/`](templates) and can be referenced by recipes or surfaced in product/docs experiences.
+
 ## Quick Start
 
 The fastest way to get started is using the get-starter script:
@@ -19,7 +21,7 @@ Or browse the available starter projects below. Each folder contains a complete,
 ### Data Ingestion
 
 - **[python-ingestion](python-ingestion)** - Python data ingestion patterns (small and large datasets)
-- **[dbt-ingestion-s3](dbt-ingestion-s3)** - Ingest data from S3 using dbt (local and cloud)
+- **[dbt-ingestion-s3](dbt-ingestion-s3)** - Ingest data from S3 using dbt (local, cloud, and Flights)
 
 ### dbt Patterns
 
@@ -41,6 +43,11 @@ Or browse the available starter projects below. Each folder contains a complete,
 ### Integrations
 
 - **[motherduck-grafana](motherduck-grafana)** - Connect Grafana to MotherDuck for visualization
+
+### Templates
+
+- **[templates/flights/dbt-runner](templates/flights/dbt-runner)** - Reusable Flight template that clones a dbt project, writes a runtime profile, runs dbt, and records an audit row
+- **[templates/dives](templates/dives)** - Reserved location for reusable Dive templates
 
 ## Getting a starter project
 
@@ -86,3 +93,26 @@ Most starter projects require:
 - **dbt** - For dbt-based starter projects (installed via project dependencies)
 
 See each starter project's README for specific requirements.
+
+## Cookbook metadata
+
+Recipes and templates can include a `meta.yml` sidecar file. This keeps GitHub READMEs readable while giving the docs site and product UIs a stable catalog format.
+
+Recipe metadata uses:
+
+```yaml
+metadata_version: 1
+id: dbt-ingestion-s3
+kind: recipe
+title: Build Hacker News models from S3 with dbt
+standalone: true
+```
+
+Template metadata uses:
+
+```yaml
+metadata_version: 1
+id: dbt-runner
+kind: flight_template
+title: dbt Runner
+```

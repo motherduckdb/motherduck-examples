@@ -1,0 +1,82 @@
+metadata_version: 1
+id: dbt-runner
+kind: flight_template
+title: dbt Runner
+description: Clone a dbt project, write a runtime MotherDuck profile, run dbt, and record an audit row.
+products:
+  - flights
+  - dbt
+  - motherduck
+categories:
+  - transformation
+  - orchestration
+entrypoints:
+  source: flight.py
+  requirements: requirements.txt
+parameters:
+  - name: REPO_URL
+    label: Git repository URL
+    type: string
+    required: true
+    default: https://github.com/motherduckdb/motherduck-examples.git
+  - name: REPO_REF
+    label: Git ref
+    type: string
+    required: true
+    default: main
+  - name: PROJECT_PATH
+    label: dbt project path
+    type: string
+    required: true
+    default: dbt-ingestion-s3
+  - name: DBT_PROFILE_NAME
+    label: dbt profile name
+    type: string
+    required: true
+    default: dbt_ingestion_s3
+  - name: MOTHERDUCK_DATABASE
+    label: MotherDuck database
+    type: string
+    required: true
+    default: hacker_news_stats
+  - name: MOTHERDUCK_HOST
+    label: MotherDuck host
+    type: string
+    required: false
+    default: api.motherduck.com
+  - name: DBT_SCHEMA
+    label: dbt target schema
+    type: string
+    required: true
+    default: main
+  - name: DBT_COMMAND
+    label: dbt command
+    type: enum
+    required: true
+    default: build
+    options:
+      - build
+      - run
+      - test
+  - name: DBT_SELECT
+    label: dbt selector
+    type: string
+    required: false
+  - name: DBT_EXCLUDE
+    label: dbt exclude selector
+    type: string
+    required: false
+  - name: RUN_DBT_SEED
+    label: Run dbt seed first
+    type: boolean
+    required: true
+    default: false
+  - name: AUDIT_SCHEMA
+    label: Audit schema
+    type: string
+    required: true
+    default: flight_audit
+standalone: false
+notes:
+  - Requires a MotherDuck access token selected on the Flight.
+  - Installs git at runtime with apt-get so the project can be cloned inside the Flight runtime.

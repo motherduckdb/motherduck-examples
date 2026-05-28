@@ -34,6 +34,7 @@ EXCLUDED_DIRS=(
   "landing"
   "datasets"
   "theming"
+  "templates"
   ".devcontainer"
   ".github"
 )

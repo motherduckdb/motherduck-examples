@@ -1,0 +1,31 @@
+metadata_version: 1
+id: dbt-ingestion-s3
+kind: recipe
+title: Build Hacker News models from S3 with dbt
+description: Query public Hacker News Parquet data in S3 and build dbt models locally, in MotherDuck, or from a scheduled Flight.
+products:
+  - motherduck
+  - dbt
+  - flights
+categories:
+  - ingestion
+  - transformation
+  - orchestration
+tags:
+  - s3
+  - parquet
+  - dbt-duckdb
+  - hacker-news
+standalone: true
+entrypoints:
+  local: README.md
+  flight: flights/create_flight.sql
+  flight_source: flights/flight.py
+templates:
+  flight: ../../templates/flights/dbt-runner
+requirements:
+  motherduck_token: true
+  external_data: public_s3
+  local_runtime: python
+default_database: hacker_news_stats
+default_schedule_cron: "45 7 * * *"

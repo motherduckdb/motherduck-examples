@@ -4,6 +4,7 @@ This project demonstrates how to ingest data directly from S3 into DuckDB or Mot
 
 - Ingest and query data directly from S3 
 - Build and run dbt models either locally (DuckDB) or in the cloud (MotherDuck)
+- Schedule the dbt project as a MotherDuck Flight
 
 ## Prerequisites
 
@@ -56,12 +57,44 @@ dbt run --target prod
 
 This will build the models in your MotherDuck database.
 
+## Running dbt from a Flight
+
+This recipe also includes a Flight wrapper in [`flights/`](flights). Use it when
+you want MotherDuck to run the dbt project on demand or on a schedule.
+
+The Flight:
+
+1. Installs `git` in the runtime.
+2. Clones this repository.
+3. Writes a runtime `profiles.yml` that uses the Flight's MotherDuck token.
+4. Runs dbt against the `hacker_news_stats` database.
+5. Writes one audit row to `flight_audit.dbt_flight_runs`.
+
+Create the Flight from SQL:
+
+```sql
+SELECT * FROM md_access_tokens();
+```
+
+Replace `replace_with_your_token_name` in
+[`flights/create_flight.sql`](flights/create_flight.sql), then run the file in
+MotherDuck. The default schedule is daily at `07:45 UTC`.
+
+For production-like scheduled runs, set `REPO_REF` in
+[`flights/create_flight.sql`](flights/create_flight.sql) to a tag or commit
+instead of `main`.
+
+The same pattern is available as a reusable template in
+[`../templates/flights/dbt-runner`](../templates/flights/dbt-runner).
+
 ## Project Structure
 
 - **models/sources.yml**: Defines the S3 Parquet file as a dbt source using DuckDB's external file support.
 - **models/top_story_by_comments.sql**: Finds the top Hacker News story by comments per month.
 - **models/duckdb_keyword_mentions.sql**: Counts monthly mentions of DuckDB in HN stories.
 - **models/top_domains.sql**: Lists the top 20 domains from HN story URLs.
+- **flights/**: Creates and runs this dbt project as a MotherDuck Flight.
+- **meta.yml**: Cookbook metadata for docs and template surfaces.
 
 ## Notes
 - The project does not copy data from S3; it queries the Parquet file directly using DuckDB/MotherDuck's external file capabilities.
