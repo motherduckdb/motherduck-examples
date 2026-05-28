@@ -85,6 +85,23 @@ This will:
 
 Your browser will prompt for MotherDuck authentication unless you have token authentication configured.
 
+## Running from a Flight
+
+This recipe includes an on-demand Flight wrapper in [`flights/`](flights).
+
+The Flight runs this dbt project in MotherDuck-managed compute by cloning the
+repository, writing a runtime `profiles.yml` with `is_ducklake: true`, running
+`dbt build`, and writing one audit row to `flight_audit.dbt_flight_runs`.
+
+Before running it, create `dbt_ducklake` as a DuckLake database with your own
+`DATA_PATH`. The Flight SQL also creates the `my_db` analytics database used by
+the query models.
+
+Replace `replace_with_your_token_name` in
+[`flights/create_flight.sql`](flights/create_flight.sql), then run the file in
+MotherDuck. This Flight is on-demand by default because the TPC-DS dbt project is
+larger than the smaller scheduled examples.
+
 ## TPC-DS Queries
 
 The project includes all 99 standard TPC-DS queries, providing a comprehensive benchmark suite for testing analytical performance across the DuckLake-MotherDuck architecture.

@@ -71,6 +71,16 @@ parameters:
     type: boolean
     required: true
     default: false
+  - name: DBT_SEED_FULL_REFRESH
+    label: Full-refresh dbt seeds
+    type: boolean
+    required: false
+    default: false
+  - name: DBT_IS_DUCKLAKE
+    label: Use a DuckLake profile
+    type: boolean
+    required: false
+    default: false
   - name: AUDIT_SCHEMA
     label: Audit schema
     type: string

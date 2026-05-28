@@ -1,16 +1,49 @@
-from __future__ import annotations
-
 import os
 import pathlib
 import re
 import shutil
 import subprocess
-import textwrap
 
 import duckdb
 
 
 WORK_ROOT = pathlib.Path("/tmp/motherduck-flight-dbt-runner")
+
+
+def main() -> None:
+    repo_url = env("REPO_URL", "https://github.com/motherduckdb/motherduck-examples.git")
+    repo_ref = env("REPO_REF", "main")
+    project_path = env("PROJECT_PATH", "dbt-ingestion-s3")
+    command = env("DBT_COMMAND", "build")
+
+    if command not in {"build", "run", "test"}:
+        raise ValueError("DBT_COMMAND must be one of: build, run, test")
+
+    run(["apt-get", "update"])
+    run(["apt-get", "install", "-y", "git"])
+
+    if WORK_ROOT.exists():
+        shutil.rmtree(WORK_ROOT)
+    clone_repo(repo_url, repo_ref)
+
+    project_dir = WORK_ROOT / project_path
+    if not project_dir.exists():
+        raise FileNotFoundError(f"dbt project path does not exist after clone: {project_path}")
+
+    profile = write_profile(project_dir)
+
+    if (project_dir / "packages.yml").exists() or (project_dir / "dependencies.yml").exists():
+        run(["dbt", "deps", "--profiles-dir", "."], cwd=project_dir)
+
+    if env_bool("RUN_DBT_SEED", False):
+        seed_args = ["dbt", "seed", "--target", profile["target"], "--profiles-dir", "."]
+        if env_bool("DBT_SEED_FULL_REFRESH", False):
+            seed_args.append("--full-refresh")
+        run(seed_args, cwd=project_dir)
+
+    run(dbt_args(command, profile["target"]), cwd=project_dir)
+    record_audit(profile, repo_url, repo_ref, project_path, command)
+    print("dbt Flight completed")
 
 
 def env(name: str, default: str) -> str:
@@ -42,19 +75,23 @@ def write_profile(project_dir: pathlib.Path) -> dict[str, str]:
     schema = validate_identifier("DBT_SCHEMA", env("DBT_SCHEMA", "main"))
     target = validate_identifier("DBT_TARGET", env("DBT_TARGET", "flight"))
     threads = env("DBT_THREADS", "1")
-
-    profile = textwrap.dedent(
-        f"""
-        {profile_name}:
-          outputs:
-            {target}:
-              type: duckdb
-              path: "md:{database}?motherduck_token={{{{ env_var('MOTHERDUCK_TOKEN') }}}}"
-              schema: {schema}
-              threads: {threads}
-          target: {target}
-        """
-    ).strip()
+    profile_lines = [
+        f"{profile_name}:",
+        "  outputs:",
+        f"    {target}:",
+        "      type: duckdb",
+        f'      path: "md:{database}"',
+        f"      schema: {schema}",
+        f"      threads: {threads}",
+    ]
+    if env_bool("DBT_IS_DUCKLAKE", False):
+        profile_lines.append("      is_ducklake: true")
+    profile_lines.extend(
+        [
+            f"  target: {target}",
+        ]
+    )
+    profile = "\n".join(profile_lines)
 
     (project_dir / "profiles.yml").write_text(profile + "\n", encoding="utf-8")
     return {
@@ -120,39 +157,6 @@ def record_audit(profile: dict[str, str], repo_url: str, repo_ref: str, project_
         )
     finally:
         con.close()
-
-
-def main() -> None:
-    repo_url = env("REPO_URL", "https://github.com/motherduckdb/motherduck-examples.git")
-    repo_ref = env("REPO_REF", "main")
-    project_path = env("PROJECT_PATH", "dbt-ingestion-s3")
-    command = env("DBT_COMMAND", "build")
-
-    if command not in {"build", "run", "test"}:
-        raise ValueError("DBT_COMMAND must be one of: build, run, test")
-
-    run(["apt-get", "update"])
-    run(["apt-get", "install", "-y", "git"])
-
-    if WORK_ROOT.exists():
-        shutil.rmtree(WORK_ROOT)
-    clone_repo(repo_url, repo_ref)
-
-    project_dir = WORK_ROOT / project_path
-    if not project_dir.exists():
-        raise FileNotFoundError(f"dbt project path does not exist after clone: {project_path}")
-
-    profile = write_profile(project_dir)
-
-    if (project_dir / "packages.yml").exists() or (project_dir / "dependencies.yml").exists():
-        run(["dbt", "deps", "--profiles-dir", "."], cwd=project_dir)
-
-    if env_bool("RUN_DBT_SEED", False):
-        run(["dbt", "seed", "--target", profile["target"], "--profiles-dir", "."], cwd=project_dir)
-
-    run(dbt_args(command, profile["target"]), cwd=project_dir)
-    record_audit(profile, repo_url, repo_ref, project_path, command)
-    print("dbt Flight completed")
 
 
 if __name__ == "__main__":

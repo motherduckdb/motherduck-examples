@@ -1,21 +1,21 @@
 metadata_version: 1
-id: dbt-ingestion-s3
+id: dbt-ducklake
 kind: recipe
-title: Build Hacker News models from S3 with dbt
-description: Query public Hacker News Parquet data in S3 and build dbt models locally, in MotherDuck, or from a scheduled Flight.
+title: Run TPC-DS models on DuckLake with dbt
+description: Load TPC-DS data into a DuckLake-backed dbt project and run the dbt build locally or from an on-demand Flight.
 products:
   - motherduck
   - dbt
   - flights
+  - ducklake
 categories:
-  - ingestion
   - transformation
+  - lakehouse
   - orchestration
 tags:
-  - s3
-  - parquet
+  - ducklake
+  - tpc-ds
   - dbt-duckdb
-  - hacker-news
 standalone: true
 entrypoints:
   local: README.md
@@ -26,6 +26,6 @@ templates:
 requirements:
   motherduck_token: true
   external_data: public_s3
+  ducklake_database: true
   local_runtime: python
-default_database: hacker_news_stats
-default_schedule_cron: "45 7 * * *"
+default_database: dbt_ducklake

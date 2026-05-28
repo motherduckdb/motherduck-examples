@@ -258,3 +258,27 @@ uv run python scripts/train_python_churn_models.py --source dbt --database local
 ```
 
 That is the core workflow this example is meant to teach.
+
+## running the dbt feature refresh from a Flight
+
+This recipe includes a Flight wrapper in [`flights/`](flights) for the dbt
+feature-refresh part of the workflow.
+
+The Flight runs:
+
+```sh
+dbt seed --target flight --profiles-dir . --full-refresh
+dbt build --target flight --profiles-dir . --select tag:churn_daily+ --exclude resource_type:seed
+```
+
+Use it when you want MotherDuck to refresh the warehouse feature tables on a
+schedule. The Python model training and scoring script remains a separate
+workflow.
+
+Replace `replace_with_your_token_name` in
+[`flights/create_flight.sql`](flights/create_flight.sql), then run the file in
+MotherDuck. The default schedule is daily at `07:15 UTC`.
+
+For production-like scheduled runs, set `REPO_REF` in
+[`flights/create_flight.sql`](flights/create_flight.sql) to a tag or commit
+instead of `main`.

@@ -1,37 +1,39 @@
--- Build Hacker News models from S3 with dbt.
+-- Refresh churn features with dbt from a Flight.
 --
 -- Before running:
 -- Create the target database if needed:
---     CREATE DATABASE IF NOT EXISTS hacker_news_stats;
+--     CREATE DATABASE IF NOT EXISTS subscription_churn;
 -- Find an access token name:
 --     SELECT * FROM md_access_tokens();
 -- Replace replace_with_your_token_name below.
 -- For scheduled workloads, replace REPO_REF with a tag or commit instead of main.
 -- For staging or non-production environments, set MOTHERDUCK_HOST in config.
 
-CREATE DATABASE IF NOT EXISTS hacker_news_stats;
+CREATE DATABASE IF NOT EXISTS subscription_churn;
 
 SELECT flight_id, flight_name, current_version
 FROM MD_CREATE_FLIGHT(
-    name := 'dbt_ingestion_s3_daily',
+    name := 'dbt_churn_prediction_daily',
     access_token_name := 'replace_with_your_token_name',
-    schedule_cron := '45 7 * * *',
+    schedule_cron := '15 7 * * *',
     requirements_txt := 'duckdb==1.5.2' || chr(10) || 'dbt-duckdb==1.10.1',
     config := MAP {
         'REPO_URL': 'https://github.com/motherduckdb/motherduck-examples.git',
         'REPO_REF': 'main',
-        'PROJECT_PATH': 'dbt-ingestion-s3',
-        'DBT_PROFILE_NAME': 'dbt_ingestion_s3',
-        'MOTHERDUCK_DATABASE': 'hacker_news_stats',
+        'PROJECT_PATH': 'dbt-churn-prediction',
+        'DBT_PROFILE_NAME': 'dbt_churn_prediction',
+        'MOTHERDUCK_DATABASE': 'subscription_churn',
         'MOTHERDUCK_HOST': 'api.motherduck.com',
         'DBT_SCHEMA': 'main',
         'DBT_COMMAND': 'build',
         'DBT_TARGET': 'flight',
-        'DBT_THREADS': '1',
-        'RUN_DBT_SEED': 'false',
-        'DBT_SEED_FULL_REFRESH': 'false',
+        'DBT_THREADS': '4',
+        'RUN_DBT_SEED': 'true',
+        'DBT_SEED_FULL_REFRESH': 'true',
         'DBT_IS_DUCKLAKE': 'false',
-        'AUDIT_SCHEMA': 'flight_audit'
+        'AUDIT_SCHEMA': 'flight_audit',
+        'DBT_SELECT': 'tag:churn_daily+',
+        'DBT_EXCLUDE': 'resource_type:seed'
     },
     source_code := $flight$
 import os

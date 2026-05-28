@@ -34,5 +34,7 @@ At runtime it:
 | `DBT_SELECT` | unset | Optional dbt selector. |
 | `DBT_EXCLUDE` | unset | Optional dbt exclude selector. |
 | `RUN_DBT_SEED` | `false` | Whether to run `dbt seed` before the main command. |
+| `DBT_SEED_FULL_REFRESH` | `false` | Whether to pass `--full-refresh` to `dbt seed`. |
+| `DBT_IS_DUCKLAKE` | `false` | Whether to add `is_ducklake: true` to the generated dbt profile. |
 | `AUDIT_SCHEMA` | `flight_audit` | Schema for the run audit table. |
 | `MOTHERDUCK_HOST` | unset | Optional MotherDuck API host. Set this for staging or other non-production environments. |

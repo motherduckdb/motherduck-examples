@@ -1,21 +1,20 @@
 metadata_version: 1
-id: dbt-ingestion-s3
+id: dbt-churn-prediction
 kind: recipe
-title: Build Hacker News models from S3 with dbt
-description: Query public Hacker News Parquet data in S3 and build dbt models locally, in MotherDuck, or from a scheduled Flight.
+title: Build churn prediction features with dbt
+description: Use dbt to build churn feature tables and run the feature refresh locally, in MotherDuck, or from a scheduled Flight.
 products:
   - motherduck
   - dbt
   - flights
 categories:
-  - ingestion
   - transformation
+  - machine-learning
   - orchestration
 tags:
-  - s3
-  - parquet
+  - churn
+  - feature-engineering
   - dbt-duckdb
-  - hacker-news
 standalone: true
 entrypoints:
   local: README.md
@@ -25,7 +24,6 @@ templates:
   flight: ../templates/flights/dbt-runner
 requirements:
   motherduck_token: true
-  external_data: public_s3
   local_runtime: python
-default_database: hacker_news_stats
-default_schedule_cron: "45 7 * * *"
+default_database: subscription_churn
+default_schedule_cron: "15 7 * * *"

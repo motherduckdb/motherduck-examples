@@ -28,6 +28,7 @@ Or browse the available starter projects below. Each folder contains a complete,
 - **[dbt-ai-prompt](dbt-ai-prompt)** - Use AI functions in dbt to transform unstructured text
 - **[dbt-churn-prediction](dbt-churn-prediction)** - Build a SQL-first churn prediction queue with dbt and MotherDuck native storage
 - **[dbt-dual-execution](dbt-dual-execution)** - Run dbt models across local and cloud databases
+- **[dbt-ducklake](dbt-ducklake)** - Run TPC-DS dbt models on DuckLake and MotherDuck
 - **[dbt-metricflow](dbt-metricflow)** - Build semantic layer with MetricFlow (local and cloud)
 
 ### Data Replication
@@ -48,6 +49,8 @@ Or browse the available starter projects below. Each folder contains a complete,
 
 - **[templates/flights/dbt-runner](templates/flights/dbt-runner)** - Reusable Flight template that clones a dbt project, writes a runtime profile, runs dbt, and records an audit row
 - **[templates/dives](templates/dives)** - Reserved location for reusable Dive templates
+
+Template-backed recipes are checked by [`scripts/check-flight-template-sync.py`](scripts/check-flight-template-sync.py) so example Flight source stays in sync with the reusable template.
 
 ## Getting a starter project
 
