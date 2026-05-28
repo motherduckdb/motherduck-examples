@@ -42,6 +42,31 @@ def assert_main_is_first_real_function(path: Path) -> None:
         raise AssertionError(f"{path}: def main() should appear before runner helper functions")
 
 
+def assert_runtime_setup_is_extracted(path: Path) -> None:
+    source = path.read_text(encoding="utf-8")
+    setup_index = source.find("def setup()")
+    setup_call_index = source.find("    setup()\n")
+    clone_call_index = source.find("    clone_repo(")
+    setup_body = """def setup() -> None:
+    run(["apt-get", "update"])
+    run(["apt-get", "install", "-y", "git"])
+
+    if WORK_ROOT.exists():
+        shutil.rmtree(WORK_ROOT)
+"""
+
+    if setup_index == -1:
+        raise AssertionError(f"{path}: missing def setup()")
+    if setup_call_index == -1:
+        raise AssertionError(f"{path}: def main() should call setup()")
+    if clone_call_index == -1:
+        raise AssertionError(f"{path}: def main() should call clone_repo()")
+    if setup_call_index > clone_call_index:
+        raise AssertionError(f"{path}: setup() should run before clone_repo()")
+    if setup_body not in source:
+        raise AssertionError(f"{path}: runtime setup should install git and clear WORK_ROOT in setup()")
+
+
 def assert_no_token_query_param(path: Path) -> None:
     source = path.read_text(encoding="utf-8")
     if "motherduck_token" in source:
@@ -67,10 +92,12 @@ def main() -> None:
             raise AssertionError(f"{create_sql_path}: embedded source does not match {flight_source_path}")
 
         assert_main_is_first_real_function(flight_source_path)
+        assert_runtime_setup_is_extracted(flight_source_path)
         assert_no_token_query_param(flight_source_path)
         checked += 1
 
     assert_main_is_first_real_function(RUNNER_TEMPLATE / "flight.py")
+    assert_runtime_setup_is_extracted(RUNNER_TEMPLATE / "flight.py")
     assert_no_token_query_param(RUNNER_TEMPLATE / "flight.py")
 
     if checked == 0:

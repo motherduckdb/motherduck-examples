@@ -55,11 +55,7 @@ def main() -> None:
     if command not in {"build", "run", "test"}:
         raise ValueError("DBT_COMMAND must be one of: build, run, test")
 
-    run(["apt-get", "update"])
-    run(["apt-get", "install", "-y", "git"])
-
-    if WORK_ROOT.exists():
-        shutil.rmtree(WORK_ROOT)
+    setup()
     clone_repo(repo_url, repo_ref)
 
     project_dir = WORK_ROOT / project_path
@@ -80,6 +76,14 @@ def main() -> None:
     run(dbt_args(command, profile["target"]), cwd=project_dir)
     record_audit(profile, repo_url, repo_ref, project_path, command)
     print("dbt Flight completed")
+
+
+def setup() -> None:
+    run(["apt-get", "update"])
+    run(["apt-get", "install", "-y", "git"])
+
+    if WORK_ROOT.exists():
+        shutil.rmtree(WORK_ROOT)
 
 
 def env(name: str, default: str) -> str:
