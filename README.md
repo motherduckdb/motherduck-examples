@@ -26,6 +26,7 @@ Or browse the available starter projects below. Each folder contains a complete,
 - **[dbt-ai-prompt](dbt-ai-prompt)** - Use AI functions in dbt to transform unstructured text
 - **[dbt-churn-prediction](dbt-churn-prediction)** - Build a SQL-first churn prediction queue with dbt and MotherDuck native storage
 - **[dbt-dual-execution](dbt-dual-execution)** - Run dbt models across local and cloud databases
+- **[dbt-duckdb-dwh-starter](dbt-duckdb-dwh-starter)** - Build a MotherDuck warehouse with dbt-duckdb, Common Crawl, Hacker News, and a Dive
 - **[dbt-metricflow](dbt-metricflow)** - Build semantic layer with MetricFlow (local and cloud)
 
 ### Data Replication
