@@ -103,6 +103,7 @@ jobs:
         with:
           name: catalog-preview
           path: .catalog-pages/
+          include-hidden-files: true
 
       - name: Comment catalog preview
         if: github.event_name == 'pull_request' && steps.catalog-source-changes.outputs.has_changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
