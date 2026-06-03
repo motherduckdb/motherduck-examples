@@ -21,6 +21,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: catalog-${{ github.ref }}
@@ -34,6 +35,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
@@ -55,11 +58,129 @@ jobs:
       - name: Validate catalog preview schema
         run: uv run --with check-jsonschema check-jsonschema --schemafile catalog.schema.json .catalog-pages/catalog.json
 
+      - name: Detect changed catalog READMEs
+        id: catalog-source-changes
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin "+${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}" --depth=1
+
+          mapfile -t changed < <(
+            git diff --name-status "origin/${{ github.base_ref }}" HEAD |
+              while IFS=$'\t' read -r status first second; do
+                candidate="${second:-$first}"
+
+                if [[ "$candidate" != "README.md" && "$candidate" != */README.md ]]; then
+                  continue
+                fi
+
+                if [[ -f "$candidate" ]] && head -n 1 "$candidate" | grep -qx -- "---"; then
+                  printf '%s\n' "$candidate"
+                  continue
+                fi
+
+                if [[ ! -f "$candidate" ]] && git show "origin/${{ github.base_ref }}:$candidate" 2>/dev/null | head -n 1 | grep -qx -- "---"; then
+                  printf '%s (removed)\n' "$candidate"
+                fi
+              done |
+              sort -u
+          )
+
+          item_count="$(uv run python -c 'import json; from pathlib import Path; print(len(json.loads(Path(".catalog-pages/catalog.json").read_text())["items"]))')"
+
+          if [[ "${#changed[@]}" -gt 0 ]]; then
+            echo "has_changes=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "has_changes=false" >> "${GITHUB_OUTPUT}"
+          fi
+          echo "item_count=${item_count}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "changed_files<<EOF"
+            printf '%s\n' "${changed[@]}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
       - name: Upload catalog preview
+        id: upload-catalog-preview
         uses: actions/upload-artifact@v4
         with:
           name: catalog-preview
           path: .catalog-pages/
+
+      - name: Comment catalog preview
+        if: github.event_name == 'pull_request' && steps.catalog-source-changes.outputs.has_changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v7
+        env:
+          ARTIFACT_URL: ${{ steps.upload-catalog-preview.outputs.artifact-url }}
+          CHANGED_FILES: ${{ steps.catalog-source-changes.outputs.changed_files }}
+          ITEM_COUNT: ${{ steps.catalog-source-changes.outputs.item_count }}
+        with:
+          script: |
+            const marker = '<!-- motherduck-catalog-preview -->'
+            const artifactUrl = process.env.ARTIFACT_URL
+            const changedFiles = process.env.CHANGED_FILES
+              .split('\n')
+              .map((file) => file.trim())
+              .filter(Boolean)
+            const changedList = changedFiles.map((file) => `- \`${file}\``).join('\n')
+            const body = [
+              marker,
+              '## Catalog Preview',
+              '',
+              `Artifact: [catalog-preview](${artifactUrl})`,
+              '',
+              `Catalog items: ${process.env.ITEM_COUNT}`,
+              '',
+              'Changed catalog README files:',
+              '',
+              changedList,
+            ].join('\n')
+
+            const { owner, repo } = context.repo
+            const issue_number = context.payload.pull_request.number
+            const comments = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            })
+            const previous = comments.data.find((comment) => comment.body?.includes(marker))
+            if (previous) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: previous.id,
+                body,
+              })
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              })
+            }
+
+      - name: Remove stale catalog preview comment
+        if: github.event_name == 'pull_request' && steps.catalog-source-changes.outputs.has_changes != 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- motherduck-catalog-preview -->'
+            const { owner, repo } = context.repo
+            const issue_number = context.payload.pull_request.number
+            const comments = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            })
+            for (const comment of comments.data.filter((comment) => comment.body?.includes(marker))) {
+              await github.rest.issues.deleteComment({
+                owner,
+                repo,
+                comment_id: comment.id,
+              })
+            }
 
   deploy:
     name: Deploy catalog to GitHub Pages
