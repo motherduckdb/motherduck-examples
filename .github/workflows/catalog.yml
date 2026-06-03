@@ -9,8 +9,6 @@ on:
       - "tests/test_build_catalog.py"
       - ".github/workflows/catalog.yml"
   push:
-    branches:
-      - main
     paths:
       - "**/README.md"
       - "catalog.schema.json"
