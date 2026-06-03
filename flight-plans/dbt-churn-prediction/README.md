@@ -9,7 +9,7 @@ description: >-
   a separate step.
 type: example
 features: [flights]
-tags: [dbt, churn, feature-engineering, machine-learning, scikit-learn, duckdb]
+tags: [dbt, python, scikit-learn]
 ---
 
 # Build Churn Prediction Features with dbt
@@ -22,6 +22,94 @@ SQL-first feature pipeline you build once and refresh on a schedule (locally,
 in MotherDuck, or from a Flight), with model training as a downstream workflow
 rather than something baked into the warehouse.
 
+The order most teams actually use it: build a dataset, train a model, then
+predict churn for the current customer population. The bundled IBM Telco dataset
+lets the Python step run immediately; swap in your own history once you have
+enough of it.
+
+## How it works
+
+The dbt project shapes raw history into a training dataset, not just a report.
+That ordering is the whole point: features come from a snapshot date, labels come
+from the future, and that time split is what makes the training setup valid.
+
+- **Staging** (`models/staging/`, materialized as views): `stg_customers`,
+  `stg_memberships`, `stg_payments`, `stg_usage_events` clean the raw seeds.
+- **Marts** (`models/marts/`, materialized as tables, schema `analytics`):
+  - `fct_customer_features_historical` is the **training input**: one row per
+    customer per historical snapshot date, with the columns that were known on
+    that date.
+  - `fct_customer_churn_labels` is the **training target**: whether that same
+    customer churned after the snapshot date, gated by `is_eligible_for_label`.
+  - `fct_customer_features_daily` and `fct_customer_churn_scores_daily` produce
+    the current-day feature rows and the warehouse-side baseline score for the
+    current eligible population.
+  - `fct_subscription_history`, `fct_churn_segment_rates`, and
+    `mart_retention_queue_daily` support survival analysis and an actionable
+    retention queue.
+- Feature logic lives in `macros/churn_features.sql`. The historical snapshot
+  dates are defined there in `churn_label_dates()` as a hardcoded list, and the
+  segment split (`member` vs `casual`) drives the prediction window (30 vs 60
+  days). Data-quality assertions are in `tests/`.
+
+### The warehouse-side score (no Python required)
+
+`fct_customer_churn_scores_daily` is a transparent, rule-based risk score built
+entirely in SQL. It combines a segment base rate with signal-based uplift across
+four risk signals, and attaches a reason and recommended action to each customer:
+
+```sql
+-- risk_score = clamp(segment base rate + sum of signal uplift) * 100
+cast(
+    round(
+        least(
+            1.0,
+            coalesce(segment_rates.observed_churn_rate, 0.0)
+              + coalesce(signal_summary.total_signal_rate_uplift, 0.0)
+        ) * 100,
+        0
+    ) as integer
+) as risk_score
+```
+
+The four signals are `payment_risk` (recent failed payments), `activity_risk`
+(no recent events / long gap), `experience_risk` (complaints or low
+satisfaction), and `membership_risk` (member with auto-renew off or prior
+churned memberships). Each carries a recommended action and offer type, so the
+table doubles as a retention work queue. Use this when you want explainable
+scores immediately, before any model exists.
+
+### The Python training and scoring workflow
+
+`scripts/train_python_churn_models.py` is the model side. It:
+
+1. loads the dataset (IBM Telco over HTTPS, or your dbt-built tables),
+2. prepares the target and splits train/validation/test (a time-based split on
+   `as_of_date` for the dbt source, stratified random otherwise),
+3. preprocesses numeric and categorical columns,
+4. trains logistic regression plus `random_forest` and `hist_gradient_boosting`
+   comparison models,
+5. selects the best model on validation `average_precision`,
+6. calibrates the winner (`CalibratedClassifierCV`, sigmoid),
+7. evaluates on the held-out test set, and
+8. optionally runs Kaplan-Meier and Cox survival analysis (`--skip-survival` to
+   turn it off).
+
+Start with logistic regression: churn is a binary target and you want a
+probability, not a yes/no, so you can rank customers by risk. The metrics that
+matter are `roc_auc` (how well churners rank above non-churners),
+`average_precision` (useful when churn is imbalanced), and `brier_score`
+(whether the probabilities are calibrated).
+
+Outputs land under `artifacts/python_models/`: `model_metrics.csv`,
+`test_predictions.csv`, `top_feature_importance.csv`, `run_summary.json`,
+`best_model.joblib`, validation/test plots, and (for `--source dbt`)
+`current_scores.csv`. Passing `--database` also writes result tables back into
+the database under `--write-schema` (`python_churn_model_metrics`,
+`python_churn_test_predictions`, `python_churn_feature_importance`,
+`python_churn_current_scores`, `python_churn_survival_summary`). Read the script
+before adapting the model side.
+
 ## What you'll adjust
 
 | Setting | Purpose | Options / example |
@@ -31,19 +119,20 @@ rather than something baked into the warehouse.
 | profiles.yml target | Where dbt builds: local DuckDB file vs MotherDuck | `local` (`local.db`) or `prod` (`md:<db>`) |
 | `vars.churn_as_of_date` (dbt_project.yml) | The "today" the daily score table is computed against | `'2026-04-15'` |
 | `vars.member_churn_grace_period_days` (dbt_project.yml) | Days of inactivity before a member counts as churned | `30` |
+| `churn_label_dates()` (macros/churn_features.sql) | The historical snapshot dates labels and features are built for | hardcoded list of dates; change for your own history |
 | dbt model selector | Which models the build/refresh touches | `tag:churn_daily+` (staging + marts) or `--exclude resource_type:seed` for all |
 | seeds (`seeds/raw_*.csv`) | Sample raw inputs to swap for your own customer, membership, usage, payment data | `raw_customers`, `raw_memberships`, `raw_usage_events`, `raw_payments` |
 | `--source` (training script) | Training data source | `ibm_telco` (runs immediately) or `dbt` (your built tables) |
 | `--write-schema` (training script) | Schema for Python prediction/metric tables written back | `science` (default) |
 | Flight env: `PROJECT_PATH`, `DBT_SELECT`, `DBT_EXCLUDE`, `RUN_DBT_SEED`, `DBT_SEED_FULL_REFRESH`, `DBT_TARGET`, `DBT_SCHEMA`, `DBT_PROFILE_NAME`, `REPO_REF`, `AUDIT_SCHEMA` | Knobs the Flight wrapper reads to clone, profile, and run dbt | see "Deploy as a Flight" |
 
-## Questions to ask the user
+## Questions to answer
 
-- How is churn defined for this business (cancellation window, inactivity window)? This sets the label and `member_churn_grace_period_days`.
-- What are the source tables for customers, subscriptions/memberships, usage/activity, and payments, and where do they live?
+- How is churn defined for this business (cancellation window, inactivity window)? This sets the label and `member_churn_grace_period_days`. Write this down first: it becomes the target the model learns.
+- What are the source tables for customers, subscriptions/memberships, usage/activity, and payments, and where do they live? You need four kinds of source data: one customer row per customer, a subscription/contract table, an activity/usage table, and a payment/billing table.
 - Target MotherDuck database and schema for the feature tables (default `subscription_churn`).
-- Full refresh each run, or incremental? (Current models rebuild as tables; seeds use `--full-refresh`.)
-- What "as of" date should the daily score table use (`churn_as_of_date`)?
+- Full refresh each run, or incremental? Current models rebuild as tables; seeds use `--full-refresh`.
+- What "as of" date should the daily score table use (`churn_as_of_date`), and which historical snapshot dates should labels and features cover (`churn_label_dates()`)?
 - Should this run on a schedule, and at what cadence?
 - MotherDuck token / credentials for cloud and Flight runs.
 - Train on the bundled IBM Telco benchmark first, or straight on your own dbt-built history?
@@ -83,9 +172,6 @@ optionally write predictions back:
 uv run python scripts/train_python_churn_models.py --source dbt --database "md:${MOTHERDUCK_DATABASE}" --write-schema science
 ```
 
-The script refuses `--source dbt` on the tiny bundled sample on purpose: it is
-too small for useful machine learning.
-
 ### Deploy as a Flight
 
 `flight.py` is the generic dbt-runner: it installs `git`, clones the repo at
@@ -112,22 +198,68 @@ separate step.
    dbt build --target flight --profiles-dir . --select tag:churn_daily+ --exclude resource_type:seed
    ```
 
-4. Optionally add a schedule (the prior recipe used daily at `07:15 UTC`).
+4. Optionally add a schedule (a daily run at `07:15 UTC` is a reasonable cadence
+   for a daily score table).
 5. Run it with the MCP `run_flight` tool, then check `flight_audit.dbt_flight_runs`
    for the audit row.
 
-## How it works / Learn more
+## Files
 
-- Models live in `models/staging/` (views) and `models/marts/` (tables). The
-  training input is `fct_customer_features_historical`, the target is
-  `fct_customer_churn_labels`, and `fct_customer_churn_scores_daily` is the
-  warehouse-side baseline score for the current eligible population.
-- Feature logic is in `macros/churn_features.sql`; data-quality assertions are in
-  `tests/`.
-- The Python training and scoring workflow is `scripts/train_python_churn_models.py`:
-  it loads the dataset, splits train/validation/test, preprocesses, trains
-  logistic regression plus comparison models, calibrates the winner, evaluates
-  (`roc_auc`, `average_precision`, `brier_score`), and writes artifacts under
-  `artifacts/python_models/`. Read that script before adapting the model side.
+- `[flight.py](flight.py)` - the shared dbt-runner Flight: installs git, shallow-clones the repo at `REPO_REF`, writes a runtime `profiles.yml` for your MotherDuck database, optionally seeds, runs the selected dbt command, and writes one audit row to `flight_audit.dbt_flight_runs`.
+- `[scripts/train_python_churn_models.py](scripts/train_python_churn_models.py)` - the Python model side: loads the dataset (IBM Telco or dbt-built tables), trains and calibrates a scikit-learn churn model, evaluates it, and optionally writes prediction tables back to MotherDuck.
+- `[dbt_project.yml](dbt_project.yml)` - dbt project config: profile name, the `churn_as_of_date` and `member_churn_grace_period_days` vars, and per-folder materializations, schemas, and the `churn_daily` tag.
+- `[profiles.yml](profiles.yml)` - dbt connection profile with `local` (DuckDB file) and `prod` (`md:<db>`) targets.
+- `[models/staging/](models/staging/)` - 4 staging views (`stg_customers`, `stg_memberships`, `stg_payments`, `stg_usage_events`) that clean the raw seeds, plus `_sources.yml` and `_models.yml` describing sources and columns.
+- `[models/marts/](models/marts/)` - 7 mart tables: the historical feature matrix and churn labels (training input and target), the current-day feature and score tables, subscription history, segment churn rates, and the daily retention queue.
+- `[macros/churn_features.sql](macros/churn_features.sql)` - shared feature logic, including the hardcoded historical snapshot dates in `churn_label_dates()` and the member-vs-casual segment split.
+- `[seeds/](seeds/)` - sample raw inputs (`raw_customers`, `raw_memberships`, `raw_usage_events`, `raw_payments` CSVs) plus `_seeds.yml`; swap these for your own customer, membership, usage, and payment history.
+- `[tests/](tests/)` - 8 singular SQL data-quality assertions (uniqueness per customer/day, risk scores in range, subscription censoring and duration consistency, label eligibility).
+- `[pyproject.toml](pyproject.toml)` - Python project deps for `uv sync` (dbt, DuckDB, pandas, scikit-learn, lifelines, matplotlib, joblib).
+- `[requirements.txt](requirements.txt)` - minimal deps (`duckdb`, `dbt-duckdb`) for the Flight runtime.
+- `[.env.example](.env.example)` - template for `MOTHERDUCK_TOKEN` and `MOTHERDUCK_DATABASE`; copy to `.env` (gitignored) for cloud runs.
+- `analyses/`, `macros/`, `snapshots/` - standard dbt scaffold dirs, currently placeholders (`.gitkeep`).
+- `uv.lock` - pinned dependency lockfile for `uv`.
+
+## Caveats
+
+- **`--source dbt` refuses the bundled sample on purpose.** The script raises if
+  the training matrix has fewer than 50 rows or fewer than 10 positive labels.
+  The bundled seeds are intentionally tiny: too small for useful machine
+  learning. Replace the seeds with real history before using `--source dbt`, or
+  stick to `--source ibm_telco` for benchmarking.
+- **The time-based split needs history.** `--source dbt` splits on `as_of_date`
+  and requires at least 3 distinct snapshot dates, with non-empty train,
+  validation, and test partitions. One snapshot date will not train.
+- **Snapshot dates are hardcoded.** `churn_label_dates()` in
+  `macros/churn_features.sql` lists fixed dates (Dec 2025 through Mar 2026), and
+  `vars.churn_as_of_date` defaults to `2026-04-15`. For your own data, edit both
+  so the snapshot dates and the "as of" date line up with your history;
+  otherwise the feature/label join produces empty or stale tables.
+- **`--database` is required for `--source dbt`.** Omitting it raises. The
+  script auto-discovers the schema holding `fct_customer_features_historical`
+  (preferring an `analytics` schema), so the dbt build must have run first
+  against the same database.
+- **Don't put your token in config.** `MOTHERDUCK_TOKEN` is a secret: keep it in
+  `.env` locally (gitignored) and as a Flight secret, not as a plain Flight
+  config value or committed file.
+- **The Flight runner defaults target a different example.** `flight.py` is the
+  shared dbt-runner and its built-in defaults (`PROJECT_PATH=dbt-ingestion-s3`,
+  `DBT_PROFILE_NAME=dbt_ingestion_s3`, `MOTHERDUCK_DATABASE=hacker_news_stats`)
+  are for the S3 ingestion example. You must override `PROJECT_PATH`,
+  `DBT_PROFILE_NAME`, and `MOTHERDUCK_DATABASE` or the Flight will build the
+  wrong project or fail to find it after clone.
+- **Identifier env vars are validated.** `DBT_PROFILE_NAME`, `DBT_SCHEMA`,
+  `DBT_TARGET`, and `AUDIT_SCHEMA` must be simple SQL identifiers
+  (`[A-Za-z_][A-Za-z0-9_]*`); anything else raises. `DBT_COMMAND` is restricted
+  to `build`, `run`, or `test`.
+- **The clone is shallow and single-ref.** `flight.py` does a `--depth 1` fetch
+  of `REPO_REF`. For reproducible scheduled runs, pin `REPO_REF` to a tag or
+  commit rather than `main`.
+- **`dbt deps` only runs when packages exist.** The runner installs packages
+  only if `packages.yml` or `dependencies.yml` is present, so a project that
+  needs deps but lacks those files will fail later in the build.
+
+## Learn more
+
 - Flight runtime, scheduling, and secrets: run the `get_flight_guide` MCP tool.
 - Deeper MotherDuck or DuckDB questions: use the `ask_docs_question` MCP tool.

@@ -91,10 +91,14 @@
           "type": "array",
           "items": {
             "enum": [
+              "admin_api",
               "dives",
               "ducklake",
               "flights",
+              "mcp",
+              "pg_duckdb",
               "pg_endpoint",
+              "shares",
               "wasm"
             ]
           },

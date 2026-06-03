@@ -63,10 +63,20 @@ Rules:
 
 - `id` must match the folder name.
 - `type` is `example` or `template`.
-- `features` is a subset of `dives`, `ducklake`, `flights`, `pg_endpoint`,
-  `wasm`.
-- `tags` are lowercase slugs for tools, datasets, and topics.
-- Do not use `motherduck` or `dbt-duckdb` as tags.
+- `features` is a subset of the MotherDuck capabilities the code actually uses:
+  `admin_api`, `dives`, `ducklake`, `flights`, `mcp`, `pg_duckdb`, `pg_endpoint`,
+  `shares`, `wasm`. Use `pg_endpoint` for the MotherDuck Postgres wire endpoint
+  and `pg_duckdb` for the pg_duckdb extension; they are different.
+- `tags` must come from the curated `ALLOWED_TAGS` list in
+  [scripts/build-catalog.py](../../../scripts/build-catalog.py). Tags name
+  significant third-party tools, frameworks, languages, platforms, and libraries
+  (for example `dbt`, `dlt`, `cloudflare`, `vercel`, `nextjs`, `pandas`,
+  `node-postgres`). They are NOT for datasets (`nyc-taxi`, `tpc-h`,
+  `hacker-news`), generic concepts (`sql`, `etl`, `serverless`, `incremental`),
+  the DuckDB engine itself, redundant variants of an existing tag
+  (`cloudflare-workers` when `cloudflare` exists), or anything already expressed
+  as a feature (`pg_duckdb`, `ducklake`). Tags may be empty. Add a new tag to the
+  list only for a significant new third-party thing.
 - READMEs under `flight-plans/` must include `flights`.
 - READMEs outside `flight-plans/` must not include `flights`.
 - Nested or supporting READMEs may use `catalog: false` to opt out before normal
@@ -74,8 +84,11 @@ Rules:
 
 ## README Body Pattern
 
-Write every catalog README like a compact agent skill. Keep it practical and
-derived from the actual files in that folder.
+Write every catalog README to serve BOTH a human reader and an agent. Phrase
+sections so they read naturally to a person and as instructions to an agent.
+Avoid one-sided phrasing like "ask the user"; prefer neutral wording such as
+"Questions to answer" and "Decide ...". Keep it practical and derived from the
+actual files in that folder.
 
 Use this structure:
 
@@ -83,13 +96,21 @@ Use this structure:
    MotherDuck pattern it demonstrates.
 2. `## What you'll adjust`: a table of real knobs found in the code, with each
    knob's purpose and example values/options.
-3. `## Questions to ask the user`: the information an agent should gather before
-   adapting the example.
+3. `## Questions to answer`: the information needed before adapting the example
+   (source, target database/schema, load pattern, schedule, credentials).
 4. `## Run it`: local commands and environment variables.
 5. For Flight Plans only, include `### Deploy as a Flight`.
 6. `## How it works / Learn more`: link to extra files in the folder and point
    to MCP guides such as `get_flight_guide`, `get_dive_guide`, or
    `ask_docs_question`.
+
+This structure is a frame, not a cap. Add sections when the example has valuable
+content that does not fit, for example `## Caveats` for footguns, limitations,
+and negative tests (what not to do, common errors), or `## Security`, `## Routes`,
+and `## How it works` with code. Do not drop valuable, example-specific
+information (safety patterns, parameterized queries, gotchas, connection details)
+just to fit the skeleton. Progressive disclosure is for generic MotherDuck
+concepts, not for the specific lessons this example teaches.
 
 Do not put every possible explanation in the README. Prefer progressive
 disclosure through nearby files and MCP guide pointers.

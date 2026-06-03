@@ -58,14 +58,14 @@ Deploy as a MotherDuck Flight, on demand or on a schedule.
 ### Apps, serverless, and edge
 
 - [cloudflare-workers](cloudflare-workers) - Query MotherDuck from Cloudflare Workers via the Postgres endpoint (`features: pg_endpoint`).
-- [cloudflare-workers-duckoffee](cloudflare-workers-duckoffee) - Full-stack Worker: world map, live chart, and Durable Object voting on a MotherDuck share (`features: pg_endpoint`).
+- [cloudflare-workers-duckoffee](cloudflare-workers-duckoffee) - Full-stack Worker: world map, live chart, and Durable Object voting on a MotherDuck share (`features: pg_endpoint, shares`).
 - [vercel-nextjs](vercel-nextjs) - Query MotherDuck from Vercel and Next.js API routes (`features: pg_endpoint`).
 - [vercel-agent-analytics](vercel-agent-analytics) - Capture a Vercel log drain and classify AI-agent traffic in MotherDuck.
 - [nodejs-motherduck](nodejs-motherduck) - Connect from Node.js with the DuckDB Neo driver, including a connection pool.
 
 ### Integrations and UI
 
-- [postgres-demo](postgres-demo) - Bridge local Postgres and MotherDuck with pg_duckdb.
+- [postgres-demo](postgres-demo) - Bridge local Postgres and MotherDuck with pg_duckdb (`features: pg_duckdb`).
 - [motherduck-grafana](motherduck-grafana) - Visualize MotherDuck data in Grafana.
 - [motherduck-ui](motherduck-ui) - Clean and analyze a CSV in the MotherDuck UI.
 
@@ -81,26 +81,30 @@ description: >-
   One or two sentences on what it does, then a "Use when ..." clause so an
   agent can route to it.
 type: example                   # example | template
-features: [flights]             # subset of: dives, ducklake, flights, pg_endpoint, wasm; [] if none
+features: [flights]             # MotherDuck capabilities used; [] if none (see list below)
 tags: [dbt, s3, parquet, hacker-news]   # lowercase slugs: tools, datasets, topics
 ---
 ```
 
 - `type` is `example` (a concrete, worked instance) or `template` (a generic plan
   an agent parameterizes).
-- `features` names the MotherDuck capabilities the code actually uses. Use
-  `flights` for Flight Plans, `pg_endpoint` for the MotherDuck Postgres endpoint,
-  `ducklake` for DuckLake, `wasm` for the in-browser client, `dives` for a Dive.
-- `tags` are free lowercase slugs for third-party tools, datasets, and topics.
-  Do not use `motherduck` or `dbt-duckdb` as tags.
+- `features` names the MotherDuck capabilities the code actually uses, from:
+  `admin_api`, `dives`, `ducklake`, `flights`, `mcp`, `pg_duckdb`, `pg_endpoint`,
+  `shares`, `wasm`. Note `pg_endpoint` (MotherDuck's Postgres wire endpoint) and
+  `pg_duckdb` (the pg_duckdb extension) are different features.
+- `tags` come from a curated list (`ALLOWED_TAGS` in `scripts/build-catalog.py`)
+  of significant third-party tools, frameworks, languages, and platforms (for
+  example `dbt`, `dlt`, `cloudflare`, `vercel`, `nextjs`, `pandas`,
+  `node-postgres`). They are not for datasets, generic concepts (`sql`, `etl`),
+  the DuckDB engine, redundant variants, or things already covered by `features`.
+  Tags may be empty. Add a new tag only for a significant new tool.
 
 The body follows a consistent, skimmable structure:
 
 1. `# <title>` and one paragraph on what it is and the MotherDuck pattern it shows.
 2. `## What you'll adjust` - a table of the real knobs found in the code, each with
    its purpose and options or an example value.
-3. `## Questions to ask the user` - the inputs an agent should gather before
-   adapting the example.
+3. `## Questions to answer` - the inputs needed before adapting the example.
 4. `## Run it` - exact commands for the project's runtime, plus a
    `### Deploy as a Flight` subsection for Flight Plans.
 5. `## How it works / Learn more` - progressive disclosure: links to extra

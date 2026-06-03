@@ -60,7 +60,7 @@ description: >-
   One or two sentences on what it does, then "Use when ..." routing guidance
   so an agent can pick it.
 type: example                   # example | template
-features: [flights]             # subset of: dives, ducklake, flights, pg_endpoint, wasm; [] if none
+features: [flights]             # MotherDuck capabilities used; [] if none (see rules)
 tags: [dbt, s3, parquet, hacker-news]   # lowercase slugs; tools, datasets, topics
 ---
 ```
@@ -71,7 +71,9 @@ catalog in one tool; running it with no `--output` validates only):
 - `id` equals the containing folder name.
 - `type` in {example, template}.
 - `features` a list (may be empty); every value in
-  {dives, ducklake, flights, pg_endpoint, wasm}.
+  {admin_api, dives, ducklake, flights, mcp, pg_duckdb, pg_endpoint, shares, wasm}.
+  Only tag a capability the example actually uses (querying built-in `sample_data`
+  is not `shares`; suggesting a Dive is not `dives`).
 - `tags` a list of lowercase slugs (no spaces, no uppercase). Reserved tags
   `motherduck` and `dbt-duckdb` are rejected (use a feature or a simpler tag).
 - Any README whose frontmatter has `features` including `flights` must live
@@ -87,9 +89,13 @@ Keep it short and skimmable. Sections, in order:
    the knob, its purpose, and options/example value. These are the parts a user
    or agent changes to fit their own case (the old template `parameters`, the S3
    path, target database, model selection, schedule, etc.).
-3. `## Questions to ask the user` — the inputs an agent should gather before
-   adapting the plan (source table(s), incremental vs full, target database and
-   schema, schedule). Always present; this is what makes the README agent-usable.
+3. `## Questions to answer` — the inputs needed before adapting the plan (source
+   table(s), incremental vs full, target database and schema, schedule). Always
+   present; phrased for both a human reader and an agent (no "ask the user").
+   Add a `## Caveats` section for footguns, limits, and negative tests, and any
+   other sections (Security, Routes, How it works with code) the example warrants.
+   The skeleton is a frame, not a cap: do not drop valuable, example-specific
+   content to fit it.
 4. `## Run it` — exact local commands (`uv run ...`, `npm ...`, `wrangler deploy`,
    etc.) and a short prerequisites note when meaningful.
    - `### Deploy as a Flight` — **only when `features` includes `flights`.** How to

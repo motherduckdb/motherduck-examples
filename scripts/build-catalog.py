@@ -27,8 +27,53 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 ALLOWED_TYPES = {"example", "template"}
-ALLOWED_FEATURES = {"dives", "ducklake", "flights", "pg_endpoint", "wasm"}
-RESERVED_TAGS = {"motherduck", "dbt-duckdb"}
+ALLOWED_FEATURES = {
+    "admin_api",
+    "dives",
+    "ducklake",
+    "flights",
+    "mcp",
+    "pg_duckdb",
+    "pg_endpoint",
+    "shares",
+    "wasm",
+}
+# Curated tag vocabulary. Tags name significant third-party tools, frameworks,
+# languages, platforms, and libraries. They are NOT for datasets (nyc-taxi,
+# tpc-h), generic concepts (sql, etl, serverless), redundant variants of an
+# existing tag (cloudflare-workers when cloudflare exists), or anything already
+# expressed as a feature (pg_duckdb, ducklake). Add a tag here only for a
+# significant new third-party thing.
+ALLOWED_TAGS = {
+    # languages and runtimes
+    "python",
+    "nodejs",
+    "typescript",
+    "javascript",
+    # data tooling and frameworks
+    "dbt",
+    "dlt",
+    "sqlmesh",
+    "metricflow",
+    "connectorx",
+    # libraries
+    "pandas",
+    "pyarrow",
+    "scikit-learn",
+    "node-postgres",
+    "generic-pool",
+    "d3",
+    # platforms and infrastructure
+    "cloudflare",
+    "vercel",
+    "nextjs",
+    "durable-objects",
+    "docker",
+    "grafana",
+    # external databases
+    "postgres",
+    "sqlite",
+}
 ALLOWED_KEYS = {"title", "id", "description", "type", "features", "tags"}
 REQUIRED_KEYS = {"title", "id", "description", "type"}
 FLIGHT_PLANS_DIR = "flight-plans"
@@ -152,10 +197,13 @@ def build_item(
         )
 
     tags = assert_slug_list(frontmatter, readme_path, "tags")
-    reserved = set(tags) & RESERVED_TAGS
-    if reserved:
+    unknown_tags = set(tags) - ALLOWED_TAGS
+    if unknown_tags:
         raise CatalogError(
-            f"{readme_path}: reserved tags {sorted(reserved)} should be features or simpler tags"
+            f"{readme_path}: tags {sorted(unknown_tags)} are not in the curated tag list. "
+            f"Tags are for significant third-party tools, not datasets, generic concepts, "
+            f"redundant variants, or features. Add to ALLOWED_TAGS in build-catalog.py only "
+            f"for a significant new tool. Allowed tags: {sorted(ALLOWED_TAGS)}"
         )
 
     relative_dir = readme_path.parent.relative_to(repo_root).as_posix()
