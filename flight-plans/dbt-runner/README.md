@@ -153,8 +153,8 @@ Note: `flight.py` runs `apt-get` to install `git`, which assumes the Flight Debi
 
 ## Files
 
-- `[flight.py](flight.py)` - the Flight runner: installs `git`, shallow-clones the repo/ref, generates a MotherDuck `profiles.yml`, optionally runs `dbt deps`/`dbt seed`, runs `dbt build`/`run`/`test`, and writes one audit row. Key functions are `write_profile()`, `clone_repo()`, and `record_audit()`.
-- `[requirements.txt](requirements.txt)` - runtime dependencies, pinning `duckdb==1.5.2` and `dbt-duckdb==1.10.1`.
+- [`flight.py`](flight.py) - the Flight runner: installs `git`, shallow-clones the repo/ref, generates a MotherDuck `profiles.yml`, optionally runs `dbt deps`/`dbt seed`, runs `dbt build`/`run`/`test`, and writes one audit row. Key functions are `write_profile()`, `clone_repo()`, and `record_audit()`.
+- [`requirements.txt`](requirements.txt) - runtime dependencies, pinning `duckdb==1.5.2` and `dbt-duckdb==1.10.1`.
 
 ## Caveats
 

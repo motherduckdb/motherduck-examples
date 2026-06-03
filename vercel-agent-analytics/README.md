@@ -162,16 +162,16 @@ ORDER BY event_ts DESC LIMIT 20;
 
 ## Files
 
-- `[api/drain.ts](api/drain.ts)` - the Vercel Function entry point: reads the raw POST body, pulls the `x-vercel-signature` header, hands off to `handleDrain`, returns `405` for non-POST.
-- `[src/](src/)` - the collector logic in five TypeScript modules: `handler.ts` (NDJSON parse, field extraction, static-asset and `BOTS_ONLY` filtering, IP anonymization), `signature.ts` (constant-time HMAC-SHA1 verification of the raw body), `classify.ts` (substring matching against `bots.yaml`), `db.ts` (the `@duckdb/node-api` connection, schema bootstrap, bulk `INSERT`), and `local-server.ts` (the local dev harness on `:8787`).
-- `[bots.yaml](bots.yaml)` - the AI classification rules, the source of truth: `user_agent_patterns` and `referer_patterns` with `pattern` / `name` / `category` (`crawler`, `agent`, `human_via_ai`), evaluated top to bottom, first match wins.
-- `[sql/01_setup.sql](sql/01_setup.sql)` - reference DDL for the table and the `ai_requests` view; the function runs the same statements automatically on cold start.
-- `[sql/02_dive_queries.sql](sql/02_dive_queries.sql)` - starter tiles you can save as a MotherDuck Dive (AI request counters, top agents, AI-referred humans, crawler 404s, daily AI share).
-- `[scripts/test-local.sh](scripts/test-local.sh)` - signs `sample-payload.ndjson` with `VERCEL_DRAIN_SECRET` and POSTs it to the local or deployed endpoint, the same way Vercel signs a real delivery.
-- `[scripts/sample-payload.ndjson](scripts/sample-payload.ndjson)` - eight example Vercel log lines (crawlers, agents, AI referers, a human) used by the test script.
-- `[vercel.json](vercel.json)` - the Vercel Function config: `maxDuration: 30` and `includeFiles: "bots.yaml"` so the classifier rules get bundled.
-- `[package.json](package.json)` - dependencies (`@duckdb/node-api`, `yaml`) and scripts (`dev`, `typecheck`); `package-lock.json` pins the lockfile.
-- `[tsconfig.json](tsconfig.json)` - strict TypeScript config (ES2022, ESNext modules) covering `api/` and `src/`.
+- [`api/drain.ts`](api/drain.ts) - the Vercel Function entry point: reads the raw POST body, pulls the `x-vercel-signature` header, hands off to `handleDrain`, returns `405` for non-POST.
+- [`src/`](src/) - the collector logic in five TypeScript modules: `handler.ts` (NDJSON parse, field extraction, static-asset and `BOTS_ONLY` filtering, IP anonymization), `signature.ts` (constant-time HMAC-SHA1 verification of the raw body), `classify.ts` (substring matching against `bots.yaml`), `db.ts` (the `@duckdb/node-api` connection, schema bootstrap, bulk `INSERT`), and `local-server.ts` (the local dev harness on `:8787`).
+- [`bots.yaml`](bots.yaml) - the AI classification rules, the source of truth: `user_agent_patterns` and `referer_patterns` with `pattern` / `name` / `category` (`crawler`, `agent`, `human_via_ai`), evaluated top to bottom, first match wins.
+- [`sql/01_setup.sql`](sql/01_setup.sql) - reference DDL for the table and the `ai_requests` view; the function runs the same statements automatically on cold start.
+- [`sql/02_dive_queries.sql`](sql/02_dive_queries.sql) - starter tiles you can save as a MotherDuck Dive (AI request counters, top agents, AI-referred humans, crawler 404s, daily AI share).
+- [`scripts/test-local.sh`](scripts/test-local.sh) - signs `sample-payload.ndjson` with `VERCEL_DRAIN_SECRET` and POSTs it to the local or deployed endpoint, the same way Vercel signs a real delivery.
+- [`scripts/sample-payload.ndjson`](scripts/sample-payload.ndjson) - eight example Vercel log lines (crawlers, agents, AI referers, a human) used by the test script.
+- [`vercel.json`](vercel.json) - the Vercel Function config: `maxDuration: 30` and `includeFiles: "bots.yaml"` so the classifier rules get bundled.
+- [`package.json`](package.json) - dependencies (`@duckdb/node-api`, `yaml`) and scripts (`dev`, `typecheck`); `package-lock.json` pins the lockfile.
+- [`tsconfig.json`](tsconfig.json) - strict TypeScript config (ES2022, ESNext modules) covering `api/` and `src/`.
 
 ## Caveats
 

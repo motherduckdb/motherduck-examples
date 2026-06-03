@@ -205,18 +205,18 @@ separate step.
 
 ## Files
 
-- `[flight.py](flight.py)` - the shared dbt-runner Flight: installs git, shallow-clones the repo at `REPO_REF`, writes a runtime `profiles.yml` for your MotherDuck database, optionally seeds, runs the selected dbt command, and writes one audit row to `flight_audit.dbt_flight_runs`.
-- `[scripts/train_python_churn_models.py](scripts/train_python_churn_models.py)` - the Python model side: loads the dataset (IBM Telco or dbt-built tables), trains and calibrates a scikit-learn churn model, evaluates it, and optionally writes prediction tables back to MotherDuck.
-- `[dbt_project.yml](dbt_project.yml)` - dbt project config: profile name, the `churn_as_of_date` and `member_churn_grace_period_days` vars, and per-folder materializations, schemas, and the `churn_daily` tag.
-- `[profiles.yml](profiles.yml)` - dbt connection profile with `local` (DuckDB file) and `prod` (`md:<db>`) targets.
-- `[models/staging/](models/staging/)` - 4 staging views (`stg_customers`, `stg_memberships`, `stg_payments`, `stg_usage_events`) that clean the raw seeds, plus `_sources.yml` and `_models.yml` describing sources and columns.
-- `[models/marts/](models/marts/)` - 7 mart tables: the historical feature matrix and churn labels (training input and target), the current-day feature and score tables, subscription history, segment churn rates, and the daily retention queue.
-- `[macros/churn_features.sql](macros/churn_features.sql)` - shared feature logic, including the hardcoded historical snapshot dates in `churn_label_dates()` and the member-vs-casual segment split.
-- `[seeds/](seeds/)` - sample raw inputs (`raw_customers`, `raw_memberships`, `raw_usage_events`, `raw_payments` CSVs) plus `_seeds.yml`; swap these for your own customer, membership, usage, and payment history.
-- `[tests/](tests/)` - 8 singular SQL data-quality assertions (uniqueness per customer/day, risk scores in range, subscription censoring and duration consistency, label eligibility).
-- `[pyproject.toml](pyproject.toml)` - Python project deps for `uv sync` (dbt, DuckDB, pandas, scikit-learn, lifelines, matplotlib, joblib).
-- `[requirements.txt](requirements.txt)` - minimal deps (`duckdb`, `dbt-duckdb`) for the Flight runtime.
-- `[.env.example](.env.example)` - template for `MOTHERDUCK_TOKEN` and `MOTHERDUCK_DATABASE`; copy to `.env` (gitignored) for cloud runs.
+- [`flight.py`](flight.py) - the shared dbt-runner Flight: installs git, shallow-clones the repo at `REPO_REF`, writes a runtime `profiles.yml` for your MotherDuck database, optionally seeds, runs the selected dbt command, and writes one audit row to `flight_audit.dbt_flight_runs`.
+- [`scripts/train_python_churn_models.py`](scripts/train_python_churn_models.py) - the Python model side: loads the dataset (IBM Telco or dbt-built tables), trains and calibrates a scikit-learn churn model, evaluates it, and optionally writes prediction tables back to MotherDuck.
+- [`dbt_project.yml`](dbt_project.yml) - dbt project config: profile name, the `churn_as_of_date` and `member_churn_grace_period_days` vars, and per-folder materializations, schemas, and the `churn_daily` tag.
+- [`profiles.yml`](profiles.yml) - dbt connection profile with `local` (DuckDB file) and `prod` (`md:<db>`) targets.
+- [`models/staging/`](models/staging/) - 4 staging views (`stg_customers`, `stg_memberships`, `stg_payments`, `stg_usage_events`) that clean the raw seeds, plus `_sources.yml` and `_models.yml` describing sources and columns.
+- [`models/marts/`](models/marts/) - 7 mart tables: the historical feature matrix and churn labels (training input and target), the current-day feature and score tables, subscription history, segment churn rates, and the daily retention queue.
+- [`macros/churn_features.sql`](macros/churn_features.sql) - shared feature logic, including the hardcoded historical snapshot dates in `churn_label_dates()` and the member-vs-casual segment split.
+- [`seeds/`](seeds/) - sample raw inputs (`raw_customers`, `raw_memberships`, `raw_usage_events`, `raw_payments` CSVs) plus `_seeds.yml`; swap these for your own customer, membership, usage, and payment history.
+- [`tests/`](tests/) - 8 singular SQL data-quality assertions (uniqueness per customer/day, risk scores in range, subscription censoring and duration consistency, label eligibility).
+- [`pyproject.toml`](pyproject.toml) - Python project deps for `uv sync` (dbt, DuckDB, pandas, scikit-learn, lifelines, matplotlib, joblib).
+- [`requirements.txt`](requirements.txt) - minimal deps (`duckdb`, `dbt-duckdb`) for the Flight runtime.
+- [`.env.example`](.env.example) - template for `MOTHERDUCK_TOKEN` and `MOTHERDUCK_DATABASE`; copy to `.env` (gitignored) for cloud runs.
 - `analyses/`, `macros/`, `snapshots/` - standard dbt scaffold dirs, currently placeholders (`.gitkeep`).
 - `uv.lock` - pinned dependency lockfile for `uv`.
 

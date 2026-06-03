@@ -122,13 +122,13 @@ npm run pool
 
 ## Files
 
-- `[src/basic.js](src/basic.js)` - the basic walkthrough: connects via `fromCache()`, runs a simple query, creates and queries `example_users`, a parameterized query, an aggregate, a `sample_data.nyc.taxi` read, and a second cached connection, then drops the table on exit.
-- `[src/connection-pool.js](src/connection-pool.js)` - the pooling example: an `MDConnectionFactory` over `generic-pool` that pins `SET THREADS='1'`, recycles stale connections via `validate()`, and runs four `nyc.taxi` queries concurrently with `Promise.all`.
-- `[package.json](package.json)` - npm manifest: declares the `@duckdb/node-api`, `dotenv`, and `generic-pool` dependencies, sets `"type": "module"` for ESM, and defines the `basic` and `pool` run scripts.
-- `[package-lock.json](package-lock.json)` - pinned dependency lockfile for reproducible installs.
-- `[.env.template](.env.template)` - environment template: copy to `.env` and set `MOTHERDUCK_TOKEN` (and optionally `MOTHERDUCK_DATABASE`).
-- `[.nvmrc](.nvmrc)` - pins Node.js 22 for tools like `nvm`.
-- `[.gitignore](.gitignore)` - excludes `node_modules/`, `.env`, local DuckDB files, and other noise from version control.
+- [`src/basic.js`](src/basic.js) - the basic walkthrough: connects via `fromCache()`, runs a simple query, creates and queries `example_users`, a parameterized query, an aggregate, a `sample_data.nyc.taxi` read, and a second cached connection, then drops the table on exit.
+- [`src/connection-pool.js`](src/connection-pool.js) - the pooling example: an `MDConnectionFactory` over `generic-pool` that pins `SET THREADS='1'`, recycles stale connections via `validate()`, and runs four `nyc.taxi` queries concurrently with `Promise.all`.
+- [`package.json`](package.json) - npm manifest: declares the `@duckdb/node-api`, `dotenv`, and `generic-pool` dependencies, sets `"type": "module"` for ESM, and defines the `basic` and `pool` run scripts.
+- [`package-lock.json`](package-lock.json) - pinned dependency lockfile for reproducible installs.
+- [`.env.template`](.env.template) - environment template: copy to `.env` and set `MOTHERDUCK_TOKEN` (and optionally `MOTHERDUCK_DATABASE`).
+- [`.nvmrc`](.nvmrc) - pins Node.js 22 for tools like `nvm`.
+- [`.gitignore`](.gitignore) - excludes `node_modules/`, `.env`, local DuckDB files, and other noise from version control.
 
 ## Caveats
 

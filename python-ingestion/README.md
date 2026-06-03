@@ -134,15 +134,15 @@ uv run pytest tests
 
 ## Files
 
-- `[python_ingestion/load_to_motherduck_small.py](python_ingestion/load_to_motherduck_small.py)` - the pandas path: fetches GitHub contributor stats, reshapes them, and writes `github.github_commits` with `CREATE TABLE AS SELECT`.
-- `[python_ingestion/load_to_motherduck_large.py](python_ingestion/load_to_motherduck_large.py)` - the typed PyArrow path: defines `ArrowTableLoadingBuffer` and inserts `github.github_commits_large` in `chunk_size` batches against an explicit schema.
-- `[python_ingestion/__init__.py](python_ingestion/__init__.py)` - marks `python_ingestion` as an importable package.
-- `[tests/](tests/)` - pytest suite: `test_load_to_motherduck_small.py` mocks the GitHub fetch and checks `process_data`, `test_load_to_motherduck_large.py` exercises the buffer chunking against an in-memory DuckDB.
-- `[Makefile](Makefile)` - `make` targets for the two load scripts and the tests (`load-md-small`, `load-md-large`, `test`).
-- `[pyproject.toml](pyproject.toml)` - project metadata and dependencies (duckdb, pandas, pyarrow, python-dotenv, requests; pytest and ruff for dev).
-- `[.env.template](.env.template)` - copy to `.env` and set `motherduck_token`; the scripts read it via `load_dotenv()`.
-- `[.python-version](.python-version)` - pins the interpreter to Python 3.12.
-- `[uv.lock](uv.lock)` - the pinned `uv` dependency lockfile.
+- [`python_ingestion/load_to_motherduck_small.py`](python_ingestion/load_to_motherduck_small.py) - the pandas path: fetches GitHub contributor stats, reshapes them, and writes `github.github_commits` with `CREATE TABLE AS SELECT`.
+- [`python_ingestion/load_to_motherduck_large.py`](python_ingestion/load_to_motherduck_large.py) - the typed PyArrow path: defines `ArrowTableLoadingBuffer` and inserts `github.github_commits_large` in `chunk_size` batches against an explicit schema.
+- [`python_ingestion/__init__.py`](python_ingestion/__init__.py) - marks `python_ingestion` as an importable package.
+- [`tests/`](tests/) - pytest suite: `test_load_to_motherduck_small.py` mocks the GitHub fetch and checks `process_data`, `test_load_to_motherduck_large.py` exercises the buffer chunking against an in-memory DuckDB.
+- [`Makefile`](Makefile) - `make` targets for the two load scripts and the tests (`load-md-small`, `load-md-large`, `test`).
+- [`pyproject.toml`](pyproject.toml) - project metadata and dependencies (duckdb, pandas, pyarrow, python-dotenv, requests; pytest and ruff for dev).
+- [`.env.template`](.env.template) - copy to `.env` and set `motherduck_token`; the scripts read it via `load_dotenv()`.
+- [`.python-version`](.python-version) - pins the interpreter to Python 3.12.
+- [`uv.lock`](uv.lock) - the pinned `uv` dependency lockfile.
 
 ## Caveats
 

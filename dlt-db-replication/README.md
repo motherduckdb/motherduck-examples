@@ -118,13 +118,13 @@ The run connects to PostgreSQL, extracts the configured tables in parallel, norm
 
 ## Files
 
-- `[sql_database_pipeline.py](sql_database_pipeline.py)` - the entry point: builds the MotherDuck pipeline, reads the table list from config, runs the ConnectorX `sql_database` source as a full refresh, then prints metrics.
-- `[timing_logs.py](timing_logs.py)` - helper that reads the dlt trace after a run: `print_pipeline_metrics()` logs overall, extract, normalize, and load durations and row counts, `configure_logger()` sets up the dedicated `pipeline_metrics` logger.
-- `[.dlt/config.toml](.dlt/config.toml)` - all non-secret knobs: source schema and table list, source/pool/stage worker counts, MotherDuck batch size, interim Parquet format, and dlt runtime log level.
+- [`sql_database_pipeline.py`](sql_database_pipeline.py) - the entry point: builds the MotherDuck pipeline, reads the table list from config, runs the ConnectorX `sql_database` source as a full refresh, then prints metrics.
+- [`timing_logs.py`](timing_logs.py) - helper that reads the dlt trace after a run: `print_pipeline_metrics()` logs overall, extract, normalize, and load durations and row counts, `configure_logger()` sets up the dedicated `pipeline_metrics` logger.
+- [`.dlt/config.toml`](.dlt/config.toml) - all non-secret knobs: source schema and table list, source/pool/stage worker counts, MotherDuck batch size, interim Parquet format, and dlt runtime log level.
 - `.dlt/secrets.toml` - PostgreSQL credentials and the MotherDuck token. Not committed (gitignored) and must be created by hand before running, see the template in "Run it".
-- `[pyproject.toml](pyproject.toml)` - project metadata and dependencies (`dlt[motherduck]`, version-pinned `connectorx`, `psycopg2-binary`, `sqlalchemy`, `humanize`), resolved by `uv`.
-- `[uv.lock](uv.lock)` - pinned dependency lockfile for reproducible `uv` installs.
-- `[.gitignore](.gitignore)` - excludes `secrets.toml`, `.env`, Python build artifacts, and local `*.duckdb` files.
+- [`pyproject.toml`](pyproject.toml) - project metadata and dependencies (`dlt[motherduck]`, version-pinned `connectorx`, `psycopg2-binary`, `sqlalchemy`, `humanize`), resolved by `uv`.
+- [`uv.lock`](uv.lock) - pinned dependency lockfile for reproducible `uv` installs.
+- [`.gitignore`](.gitignore) - excludes `secrets.toml`, `.env`, Python build artifacts, and local `*.duckdb` files.
 
 ## Caveats
 

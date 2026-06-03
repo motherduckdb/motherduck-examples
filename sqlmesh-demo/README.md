@@ -135,14 +135,14 @@ If SQLMesh cannot find your token during `info`/`plan`, make sure `MOTHERDUCK_TO
 
 ## Files
 
-- `[load/stock_data_pipeline.py](load/stock_data_pipeline.py)` - the dlt load: fetches info, options, and history from yfinance for each ticker and writes raw tables into the `stock_data` schema on MotherDuck.
-- `[load/symbols.txt](load/symbols.txt)` - the ticker list, one symbol per line (ships with 11 large-cap names: MSFT, AAPL, NVDA, ...). Edit to load your own.
-- `[transform/config.yaml](transform/config.yaml)` - the SQLMesh project config: defines the `motherduck` gateway, target database (`dlt_test_db`), DuckDB dialect, and default backfill start.
-- `[transform/external_models.yaml](transform/external_models.yaml)` - declares the raw dlt tables and their columns as external sources so SQLMesh knows the upstream schema. Regenerate with `sqlmesh create_external_models`.
-- `[transform/models/](transform/models/)` - the SQLMesh models in three layers: `interim/` (typed and cleaned, incremental and SCD type 2 over the raw dlt tables), `conformed/` (business-ready view and full models), and `mart/` (the joined market-cap analytics view).
-- `[transform/](transform/)` - the SQLMesh root, also holding empty scaffold dirs (`audits/`, `macros/`, `seeds/`, `tests/`) for project growth.
-- `[pyproject.toml](pyproject.toml)` - the uv project definition: pins dlt, duckdb, sqlmesh (with the web UI extra), and yfinance.
-- `[uv.lock](uv.lock)` - the pinned dependency lockfile for reproducible `uv sync`.
+- [`load/stock_data_pipeline.py`](load/stock_data_pipeline.py) - the dlt load: fetches info, options, and history from yfinance for each ticker and writes raw tables into the `stock_data` schema on MotherDuck.
+- [`load/symbols.txt`](load/symbols.txt) - the ticker list, one symbol per line (ships with 11 large-cap names: MSFT, AAPL, NVDA, ...). Edit to load your own.
+- [`transform/config.yaml`](transform/config.yaml) - the SQLMesh project config: defines the `motherduck` gateway, target database (`dlt_test_db`), DuckDB dialect, and default backfill start.
+- [`transform/external_models.yaml`](transform/external_models.yaml) - declares the raw dlt tables and their columns as external sources so SQLMesh knows the upstream schema. Regenerate with `sqlmesh create_external_models`.
+- [`transform/models/`](transform/models/) - the SQLMesh models in three layers: `interim/` (typed and cleaned, incremental and SCD type 2 over the raw dlt tables), `conformed/` (business-ready view and full models), and `mart/` (the joined market-cap analytics view).
+- [`transform/`](transform/) - the SQLMesh root, also holding empty scaffold dirs (`audits/`, `macros/`, `seeds/`, `tests/`) for project growth.
+- [`pyproject.toml`](pyproject.toml) - the uv project definition: pins dlt, duckdb, sqlmesh (with the web UI extra), and yfinance.
+- [`uv.lock`](uv.lock) - the pinned dependency lockfile for reproducible `uv sync`.
 
 ## Caveats
 

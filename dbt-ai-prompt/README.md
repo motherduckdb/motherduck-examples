@@ -109,15 +109,15 @@ ATTACH 'md:_share/webshop-dbt-md-ai/a8a01cac-c4e6-4de1-93bf-bcc4c54aa77f';
 
 ## Files
 
-- `[dbt_project.yml](dbt_project.yml)` - dbt project config: names the project `dbt_ai_prompt`, sets standard path layout, and defaults `models/reviews` to materialize as `table` writing to database `my_db` (change this placeholder before running).
-- `[profiles.yml](profiles.yml)` - the dbt connection profile: a single `dev` target using the `duckdb` adapter with `path: 'md:'` to connect to MotherDuck.
-- `[models/reviews/reviews_attributes.sql](models/reviews/reviews_attributes.sql)` - the core model: calls `prompt()` once per review row with a `struct` and `struct_descr` to extract 16 typed fields, materialized as a table (`limit 10` caps the demo run).
-- `[models/reviews/reviews_attributes_by_product.sql](models/reviews/reviews_attributes_by_product.sql)` - a view that unnests the array fields and re-aggregates them into deduplicated arrays per product.
-- `[models/reviews/reviews_attributes_sentiment_by_product.sql](models/reviews/reviews_attributes_sentiment_by_product.sql)` - a view that counts positive/neutral/negative sentiment per product and computes a normalized score for both reviews and customer-service interactions.
-- `[models/reviews/_sources.yml](models/reviews/_sources.yml)` - declares the `reviews` source: database `webshop-dbt-md-ai`, schema `main`, with tables including `reviews_raw`.
-- `[models/reviews/schema.yml](models/reviews/schema.yml)` - model documentation and data tests: column descriptions plus `not_null` and `accepted_values` checks (e.g. `sentiment` must be positive/neutral/negative).
-- `[analyses/](analyses/)`, `[macros/](macros/)`, `[seeds/](seeds/)`, `[snapshots/](snapshots/)`, `[tests/](tests/)` - the standard dbt project directories, empty placeholders here (each holds a `.gitkeep`).
-- `[.gitignore](.gitignore)` - ignores dbt build output: `target/`, `dbt_packages/`, and `logs/`.
+- [`dbt_project.yml`](dbt_project.yml) - dbt project config: names the project `dbt_ai_prompt`, sets standard path layout, and defaults `models/reviews` to materialize as `table` writing to database `my_db` (change this placeholder before running).
+- [`profiles.yml`](profiles.yml) - the dbt connection profile: a single `dev` target using the `duckdb` adapter with `path: 'md:'` to connect to MotherDuck.
+- [`models/reviews/reviews_attributes.sql`](models/reviews/reviews_attributes.sql) - the core model: calls `prompt()` once per review row with a `struct` and `struct_descr` to extract 16 typed fields, materialized as a table (`limit 10` caps the demo run).
+- [`models/reviews/reviews_attributes_by_product.sql`](models/reviews/reviews_attributes_by_product.sql) - a view that unnests the array fields and re-aggregates them into deduplicated arrays per product.
+- [`models/reviews/reviews_attributes_sentiment_by_product.sql`](models/reviews/reviews_attributes_sentiment_by_product.sql) - a view that counts positive/neutral/negative sentiment per product and computes a normalized score for both reviews and customer-service interactions.
+- [`models/reviews/_sources.yml`](models/reviews/_sources.yml) - declares the `reviews` source: database `webshop-dbt-md-ai`, schema `main`, with tables including `reviews_raw`.
+- [`models/reviews/schema.yml`](models/reviews/schema.yml) - model documentation and data tests: column descriptions plus `not_null` and `accepted_values` checks (e.g. `sentiment` must be positive/neutral/negative).
+- [`analyses/`](analyses/), [`macros/`](macros/), [`seeds/`](seeds/), [`snapshots/`](snapshots/), [`tests/`](tests/) - the standard dbt project directories, empty placeholders here (each holds a `.gitkeep`).
+- [`.gitignore`](.gitignore) - ignores dbt build output: `target/`, `dbt_packages/`, and `logs/`.
 
 ## Caveats
 

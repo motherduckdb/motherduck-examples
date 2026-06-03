@@ -166,13 +166,13 @@ If you install the [MotherDuck Native Integration](https://vercel.com/marketplac
 
 ## Files
 
-- `[src/lib/motherduck.ts](src/lib/motherduck.ts)` - the shared `pg.Pool` (reads `MOTHERDUCK_TOKEN`/`MOTHERDUCK_HOST`/`MOTHERDUCK_DB`), the `attachDatabasePool` cleanup hook, and the `withClient` checkout/release helper.
-- `[src/app/api/trips/route.ts](src/app/api/trips/route.ts)` - the `GET /api/trips` handler: queries the 20 most recent `nyc.taxi` trips.
-- `[src/app/api/stats/route.ts](src/app/api/stats/route.ts)` - the `GET /api/stats` handler: validates `YYYY-MM-DD` dates and runs the parameterized `$1`/`$2` aggregate.
-- `[.env.local.example](.env.local.example)` - template for the three env vars; copy to `.env.local` and set `MOTHERDUCK_TOKEN`.
-- `[package.json](package.json)` - dependencies (`next`, `pg`, `@vercel/functions`, React) and the `dev`/`build`/`start` scripts.
-- `[next.config.ts](next.config.ts)` - Next.js config (currently empty defaults).
-- `[tsconfig.json](tsconfig.json)` - TypeScript config, including the `@/*` to `src/*` path alias.
+- [`src/lib/motherduck.ts`](src/lib/motherduck.ts) - the shared `pg.Pool` (reads `MOTHERDUCK_TOKEN`/`MOTHERDUCK_HOST`/`MOTHERDUCK_DB`), the `attachDatabasePool` cleanup hook, and the `withClient` checkout/release helper.
+- [`src/app/api/trips/route.ts`](src/app/api/trips/route.ts) - the `GET /api/trips` handler: queries the 20 most recent `nyc.taxi` trips.
+- [`src/app/api/stats/route.ts`](src/app/api/stats/route.ts) - the `GET /api/stats` handler: validates `YYYY-MM-DD` dates and runs the parameterized `$1`/`$2` aggregate.
+- [`.env.local.example`](.env.local.example) - template for the three env vars; copy to `.env.local` and set `MOTHERDUCK_TOKEN`.
+- [`package.json`](package.json) - dependencies (`next`, `pg`, `@vercel/functions`, React) and the `dev`/`build`/`start` scripts.
+- [`next.config.ts`](next.config.ts) - Next.js config (currently empty defaults).
+- [`tsconfig.json`](tsconfig.json) - TypeScript config, including the `@/*` to `src/*` path alias.
 
 ## Caveats
 

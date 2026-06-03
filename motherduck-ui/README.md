@@ -108,8 +108,8 @@ You can also run the script from the DuckDB or MotherDuck CLI, but it is written
 
 ## Files
 
-- `[script.sql](script.sql)` - the guided SQL walkthrough: loads the CSV, runs `SUMMARIZE`, builds up the cleaning `SELECT` step by step (drop bad rows, parse `Unit size`, normalize the price), and ends with the exercise query.
-- `[winelist_sample.csv](winelist_sample.csv)` - the intentionally messy source data: ~2,450 rows of wine merchant offers with country, region, producer, wine name, vintage, unit size (e.g. `6x75cl`), WA and Vinous scores, quantity, and a dollar-formatted offer price.
+- [`script.sql`](script.sql) - the guided SQL walkthrough: loads the CSV, runs `SUMMARIZE`, builds up the cleaning `SELECT` step by step (drop bad rows, parse `Unit size`, normalize the price), and ends with the exercise query.
+- [`winelist_sample.csv`](winelist_sample.csv) - the intentionally messy source data: ~2,450 rows of wine merchant offers with country, region, producer, wine name, vintage, unit size (e.g. `6x75cl`), WA and Vinous scores, quantity, and a dollar-formatted offer price.
 
 ## Caveats
 

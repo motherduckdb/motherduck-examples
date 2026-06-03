@@ -171,16 +171,16 @@ row to `flight_audit.dbt_flight_runs`.
 
 ## Files
 
-- `[flight.py](flight.py)` - the shared dbt-runner Flight: installs git, shallow-clones the repo/ref, writes a runtime `profiles.yml` from env vars (adding `is_ducklake: true`), runs the dbt command, and records one audit row in `<AUDIT_SCHEMA>.dbt_flight_runs`.
-- `[dbt_project.yml](dbt_project.yml)` - dbt project config: profile name `dbt_ducklake`, plus the per-layer settings that send raw models to schema `raw` (tag `raw`) and the query models to database `my_db` (tag `queries`).
-- `[profiles.yml](profiles.yml)` - the local dbt profile: a `motherduck` target (`md:dbt_ducklake`, `is_ducklake: true`) and a `local` target (`ducklake:local_dev.db`) for offline development. The Flight ignores this and generates its own.
-- `[models/tpcds/raw/](models/tpcds/raw/)` - the 25 thin raw models (one `select` per TPC-DS base table) materialized into DuckLake, plus `_sources.yml` which points the dbt-duckdb adapter at the S3 parquet via `meta.external_location`.
-- `[models/tpcds/queries/](models/tpcds/queries/)` - the 99 standard TPC-DS analytical query models (`query_1.sql` through `query_99.sql`) that `ref` the raw tables and land in `my_db`.
-- `[requirements.txt](requirements.txt)` - Python deps the Flight installs at runtime: `duckdb` and `dbt-duckdb`.
-- `[pyproject.toml](pyproject.toml)` - local project deps for `uv sync` / `uv run dbt` (dbt-core, dbt-duckdb, duckdb), Python 3.12+. `[uv.lock](uv.lock)` pins the resolved versions.
-- `[.python-version](.python-version)` - pins the local Python version (3.12) for uv.
-- `[.user.yml](.user.yml)` / `[.gitignore](.gitignore)` - dbt anonymous-usage user id, and ignore rules for `target/`, `dbt_packages/`, `logs/`, and `*.db`.
-- `[analyses/](analyses/)`, `[macros/](macros/)`, `[seeds/](seeds/)`, `[snapshots/](snapshots/)`, `[tests/](tests/)` - empty standard dbt scaffold directories (each holds a `.gitkeep`).
+- [`flight.py`](flight.py) - the shared dbt-runner Flight: installs git, shallow-clones the repo/ref, writes a runtime `profiles.yml` from env vars (adding `is_ducklake: true`), runs the dbt command, and records one audit row in `<AUDIT_SCHEMA>.dbt_flight_runs`.
+- [`dbt_project.yml`](dbt_project.yml) - dbt project config: profile name `dbt_ducklake`, plus the per-layer settings that send raw models to schema `raw` (tag `raw`) and the query models to database `my_db` (tag `queries`).
+- [`profiles.yml`](profiles.yml) - the local dbt profile: a `motherduck` target (`md:dbt_ducklake`, `is_ducklake: true`) and a `local` target (`ducklake:local_dev.db`) for offline development. The Flight ignores this and generates its own.
+- [`models/tpcds/raw/`](models/tpcds/raw/) - the 25 thin raw models (one `select` per TPC-DS base table) materialized into DuckLake, plus `_sources.yml` which points the dbt-duckdb adapter at the S3 parquet via `meta.external_location`.
+- [`models/tpcds/queries/`](models/tpcds/queries/) - the 99 standard TPC-DS analytical query models (`query_1.sql` through `query_99.sql`) that `ref` the raw tables and land in `my_db`.
+- [`requirements.txt`](requirements.txt) - Python deps the Flight installs at runtime: `duckdb` and `dbt-duckdb`.
+- [`pyproject.toml`](pyproject.toml) - local project deps for `uv sync` / `uv run dbt` (dbt-core, dbt-duckdb, duckdb), Python 3.12+. [`uv.lock`](uv.lock) pins the resolved versions.
+- [`.python-version`](.python-version) - pins the local Python version (3.12) for uv.
+- [`.user.yml`](.user.yml) / [`.gitignore`](.gitignore) - dbt anonymous-usage user id, and ignore rules for `target/`, `dbt_packages/`, `logs/`, and `*.db`.
+- [`analyses/`](analyses/), [`macros/`](macros/), [`seeds/`](seeds/), [`snapshots/`](snapshots/), [`tests/`](tests/) - empty standard dbt scaffold directories (each holds a `.gitkeep`).
 
 ## Caveats
 

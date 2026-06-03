@@ -92,12 +92,12 @@ To add your own dashboard, export it from the Grafana UI (the **Export** button,
 
 ## Files
 
-- `[setup.sh](setup.sh)` - the runner: detects the OS, downloads the latest MotherDuck DuckDB datasource plugin from GitHub, validates the `motherduck_token` env var, then starts a Grafana Docker container with the plugin and `provisioning/` mounted.
-- `[provisioning/](provisioning/)` - the Grafana provisioning tree mounted into the container, holding the datasource and dashboard config:
-  - `[provisioning/datasources/sample_data.yaml](provisioning/datasources/sample_data.yaml)` - defines the `MotherDuck-Sample-Data` datasource, attaching `md:sample_data` via `initSql` and reading the token from `$__env{motherduck_token}`.
-  - `[provisioning/dashboards/dashboards.yaml](provisioning/dashboards/dashboards.yaml)` - registers the file provider that auto-loads every dashboard JSON from `/etc/grafana/provisioning/dashboards/json`.
-  - `[provisioning/dashboards/json/](provisioning/dashboards/json/)` - the example dashboard definitions (2 files): `nyc_services.json` (NYC Services, service requests by `created_date`) and `nyc_rideshare.json` (NYC_rideshare, rideshare totals).
-- `[image.png](image.png)` - screenshot showing where to set the time-series format and the code-mode query editor when building a panel.
+- [`setup.sh`](setup.sh) - the runner: detects the OS, downloads the latest MotherDuck DuckDB datasource plugin from GitHub, validates the `motherduck_token` env var, then starts a Grafana Docker container with the plugin and `provisioning/` mounted.
+- [`provisioning/`](provisioning/) - the Grafana provisioning tree mounted into the container, holding the datasource and dashboard config:
+  - [`provisioning/datasources/sample_data.yaml`](provisioning/datasources/sample_data.yaml) - defines the `MotherDuck-Sample-Data` datasource, attaching `md:sample_data` via `initSql` and reading the token from `$__env{motherduck_token}`.
+  - [`provisioning/dashboards/dashboards.yaml`](provisioning/dashboards/dashboards.yaml) - registers the file provider that auto-loads every dashboard JSON from `/etc/grafana/provisioning/dashboards/json`.
+  - [`provisioning/dashboards/json/`](provisioning/dashboards/json/) - the example dashboard definitions (2 files): `nyc_services.json` (NYC Services, service requests by `created_date`) and `nyc_rideshare.json` (NYC_rideshare, rideshare totals).
+- [`image.png`](image.png) - screenshot showing where to set the time-series format and the code-mode query editor when building a panel.
 - `.gitignore` - excludes the downloaded `plugins/` directory and `.DS_Store`, so the plugin is fetched fresh by `setup.sh` and never committed.
 
 ## Caveats
