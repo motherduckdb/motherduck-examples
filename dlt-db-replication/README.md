@@ -1,155 +1,68 @@
-# PostgreSQL to MotherDuck Replication with DLT
+---
+title: Replicate PostgreSQL Tables to MotherDuck with dlt
+id: dlt-db-replication
+description: >-
+  A dlt pipeline that extracts a list of PostgreSQL tables in parallel and loads
+  them into MotherDuck, with per-run timing metrics. Use when you need to copy or
+  refresh tables from a source SQL database into MotherDuck and want tunable
+  extract, normalize, and load parallelism.
+type: example
+features: []
+tags: [dlt, postgres, connectorx, parquet, sqlalchemy, replication]
+---
 
-This repository demonstrates how to efficiently replicate data from a PostgreSQL database to [MotherDuck](https://motherduck.com/) using [DLT](https://dlthub.com/) (Data Loading Tool). The pipeline is designed to extract tables from PostgreSQL, transform them as needed, and load them into MotherDuck with optimal performance.
+# Replicate PostgreSQL Tables to MotherDuck with dlt
 
-## 📋 Project Overview
+This example uses [dlt](https://dlthub.com/) to replicate a configured set of PostgreSQL tables into MotherDuck. It reads the source connection and the table list from `.dlt/` config, extracts tables in parallel through dlt's `sql_database` source (ConnectorX backend, Parquet interim storage), and loads them into a MotherDuck dataset with `write_disposition="replace"` (full refresh: each table is dropped and recreated every run). The MotherDuck pattern it shows is bulk loading from an external relational database via dlt's MotherDuck destination, plus a helper that logs extract, normalize, and load timings per run.
 
-This pipeline allows you to:
-- Extract data from specified tables in a PostgreSQL database
-- Parallelize the extraction process for improved performance
-- Transform the data during normalization (if needed)
-- Load the data into MotherDuck using configurable batch sizes
-- Track detailed metrics about each pipeline run
+## What you'll adjust
 
-The project is configured to use [ConnectorX](https://github.com/sfu-db/connector-x) for efficient data extraction and Parquet format for interim storage.
+| Setting | Purpose | Options / example |
+| --- | --- | --- |
+| `[sources.sql_database.credentials]` in `.dlt/secrets.toml` | Source PostgreSQL connection | `drivername`, `database`, `host`, `port` (5432), `username`, `password` |
+| `[destination.motherduck.credentials] token` in `.dlt/secrets.toml` | MotherDuck auth token for the destination | your MotherDuck access token |
+| `[sources.sql_database] schema` in `.dlt/config.toml` | Source schema to read tables from | e.g. `my_pg`, `public` |
+| `[sources.sql_database] tables` in `.dlt/config.toml` | Which tables to replicate (read by `dlt.config.get("sources.sql_database.tables")` in `sql_database_pipeline.py`) | list of table names, e.g. `["customer", "store_sales"]` |
+| `pipeline_name` / `dataset_name` in `sql_database_pipeline.py` | Pipeline id and target MotherDuck dataset (schema) | `pg2md` / `pg2md_data` |
+| `write_disposition` in `sql_database_pipeline.py` `pipeline.run(...)` | Load strategy | `replace` (full refresh, current), `append`, or `merge` (incremental) |
+| `[sources.sql_database] workers` and `[postgres] pool_size` in `.dlt/config.toml` | Source extraction parallelism and matching connection pool | both `6` by default; keep them equal |
+| `[extract] / [normalize] / [load] workers` in `.dlt/config.toml` | Per-stage parallelism | `8` / `4` / `4` |
+| `[destination.motherduck] batch_size` in `.dlt/config.toml` | Rows per load batch (memory vs throughput) | `1000000` |
+| `[data_writer] format` in `.dlt/config.toml` | Interim file format | `parquet` |
+| `[runtime] log_level` in `.dlt/config.toml` | Log verbosity | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
 
-## 🛠️ Requirements
+## Questions to ask the user
 
-- Python 3.11 or higher
-- PostgreSQL database (source)
-- MotherDuck account (destination)
+- Source database: which PostgreSQL host, database, and schema?
+- Which tables to replicate, and is the list stable or changing often?
+- Load strategy: full refresh (`replace`, current default) or incremental (`merge`/`append` with a cursor/primary key)?
+- Target MotherDuck database and dataset (schema) name?
+- Expected data volume, so extract/normalize/load workers and `batch_size` can be tuned?
+- Credentials: PostgreSQL username/password and a MotherDuck access token, and where they should live (`secrets.toml` vs environment).
+- How often should this run, and from where (local, CI, an orchestrator)?
 
-## 📦 Dependencies
+## Run it
 
-The project requires the following Python packages:
-- `dlt[motherduck]>=1.7.0`: Core data loading tool with MotherDuck support
-- `connectorx<0.4.2`: Efficient database connector for PostgreSQL
-- `humanize>=4.12.1`: For human-readable output formatting
-- `psycopg2-binary>=2.9.10`: PostgreSQL database adapter
-- `sqlalchemy>=2.0.38`: SQL toolkit and Object-Relational Mapping
-
-## 🚀 Setup
-
-### 1. Using uv (Recommended)
-
-[uv](https://github.com/astral-sh/uv) is a modern Python package installer and resolver built in Rust, designed to be significantly faster than traditional tools.
-
-If you don't have uv installed:
+Prerequisites: Python 3.11+, a reachable PostgreSQL source, and a MotherDuck account plus access token. Fill in `.dlt/secrets.toml` (PostgreSQL credentials and the MotherDuck `token`) before running. `secrets.toml` is gitignored.
 
 ```bash
-# Install uv (macOS/Linux)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Or with pip
-pip install uv
-```
-
-The simplest way to run the pipeline is with:
-
-```bash
-# This will handle environment creation, dependency installation and execution in one step
+# One step: uv creates the env, installs deps from pyproject.toml, and runs
 uv run sql_database_pipeline.py
 ```
 
-Alternatively, if you want to sync dependencies first:
+Or sync first, then run:
 
 ```bash
-# Install project dependencies from pyproject.toml
 uv sync
-
-# Then run the pipeline
-python sql_database_pipeline.py
+uv run python sql_database_pipeline.py
 ```
 
-### 2. Traditional Setup (Alternative)
+The run connects to PostgreSQL, extracts the configured tables in parallel, normalizes them to Parquet, loads them into the MotherDuck dataset, and then logs per-stage timing and row counts via `timing_logs.py`.
 
-If you prefer the traditional approach:
+## How it works / Learn more
 
-```bash
-# Create and activate virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -e .
-```
-
-### 3. Configure Credentials
-
-Create or update the `.dlt/secrets.toml` file with your database credentials:
-
-```toml
-# PostgreSQL credentials
-[sources.sql_database.credentials]
-drivername = "postgresql"
-database = "your_database_name"
-host = "your_postgres_host"
-password = "your_postgres_password"
-port = 5432
-username = "your_postgres_username"
-
-# MotherDuck credentials
-[destination.motherduck.credentials]
-token = "your_motherduck_token"
-```
-
-## ⚙️ Configuration
-
-The pipeline behavior is controlled by the `.dlt/config.toml` file. Key configuration sections include:
-
-### Runtime Settings
-Control log levels and telemetry options.
-
-### Source Configuration
-Define which PostgreSQL schema and tables to extract, as well as parallelization settings.
-
-### Destination Configuration
-Configure MotherDuck-specific settings like batch sizes.
-
-### Pipeline Stage Configuration
-Set parallelization levels for each pipeline stage (extract, normalize, load).
-
-## 🏃‍♂️ Usage
-
-Run the pipeline with:
-
-```bash
-# If using uv
-uv run sql_database_pipeline.py
-
-# Or if using traditional setup with activated environment
-python sql_database_pipeline.py
-```
-
-This will:
-1. Connect to your PostgreSQL database
-2. Extract the configured tables in parallel
-3. Transform the data as needed
-4. Load the data into MotherDuck
-5. Output detailed metrics about the run
-
-## 📊 Performance Optimization
-
-The pipeline is configured for optimal performance with:
-
-- Parallel extraction from PostgreSQL (8 workers)
-- Matching connection pool size (8 connections)
-- Parquet format for efficient interim storage
-- Large batch sizes for MotherDuck loading (1,000,000 rows)
-- Separate worker configurations for extract, normalize, and load stages
-
-## 🔍 Troubleshooting
-
-### Common Issues
-
-1. **Connection errors**: Verify your PostgreSQL credentials and network connectivity
-2. **Memory issues**: Reduce batch sizes or worker counts if experiencing OOM errors
-3. **Performance issues**: Increase parallelization settings for faster processing
-
-## 📝 License
-
-This project is part of the MotherDuck examples repository and is intended for educational purposes.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+- `sql_database_pipeline.py`: defines the pipeline, reads the table list from config, builds the `sql_database` source with `backend="connectorx"`, `.parallelize()`, and `.with_resources(*tables)`, then runs with `write_disposition="replace"`.
+- `timing_logs.py`: `print_pipeline_metrics()` and `configure_logger()` extract timings and row counts from the dlt trace for overall, extract, normalize, and load stages.
+- `.dlt/config.toml`: all the non-secret knobs (schema, table list, workers, batch size, format, log level).
+- dlt write dispositions and incremental loading: https://dlthub.com/docs/general-usage/incremental-loading
+- For deeper MotherDuck or DuckDB questions (destination behavior, dataset/schema layout, tuning loads), run the `ask_docs_question` MCP tool or see the MotherDuck docs.

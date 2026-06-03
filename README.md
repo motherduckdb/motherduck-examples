@@ -1,156 +1,162 @@
 # MotherDuck examples
 
-Ready-to-use starter projects for building with MotherDuck: self-contained, copy-or-clone projects with setup instructions, dependencies, and example code—perfect for bootstrapping your next MotherDuck project.
+A catalog of opinionated, ready-to-use examples for building with MotherDuck.
+Each example is a self-contained folder with working code and a README that
+reads like an agent skill: minimal front matter for discovery, plus a body that
+tells an agent (and a human) exactly what to adapt, what to ask, and how to run
+or deploy it.
 
-This repository is also evolving into a cookbook for MotherDuck recipes and templates. Recipe folders remain standalone starter projects. Shared assets, such as Flight and Dive templates, live under [`templates/`](templates) and can be referenced by recipes or surfaced in product/docs experiences.
+The same source feeds several surfaces from one place: GitHub, the docs site, an
+agent via the MotherDuck MCP server, and the `motherduck` CLI.
 
-## Quick Start
+There are two kinds of entry:
 
-The fastest way to get started is using the get-starter script:
+- **Flight Plans** live under [`flight-plans/`](flight-plans) and deploy as a
+  MotherDuck Flight (Python runtime plus scheduling). They are non-deterministic
+  plans: an agent reads the README, asks the user a few questions, adapts the
+  snippet, and deploys it. They carry `features: [flights]`.
+- **Examples** at the top level are everything else: dbt projects, app and edge
+  integrations, ingestion scripts, and UI walkthroughs.
+
+## Quick start
+
+Pull a single example into a new folder with the get-starter script (short name
+works for both top-level examples and Flight Plans):
 
 ```bash
-curl -fsSL https://get.motherduck.com | bash -s <starter-name>
+curl -fsSL https://get.motherduck.com | bash -s <name>
+# e.g.
+curl -fsSL https://get.motherduck.com | bash -s dbt-ingestion-s3
 ```
 
-Or browse the available starter projects below. Each folder contains a complete, working example with its own README:
+## Flight Plans
 
-### Getting Started
+Deploy as a MotherDuck Flight, on demand or on a schedule.
 
-- **[nodejs-motherduck](nodejs-motherduck)** - Node.js connection and query examples using DuckDB Neo driver
+| Plan | Type | What it does |
+|---|---|---|
+| [dbt-runner](flight-plans/dbt-runner) | template | Run any dbt project from git as a Flight. The base plan the others adapt. |
+| [dbt-ingestion-s3](flight-plans/dbt-ingestion-s3) | example | Build Hacker News models from Parquet in S3 with dbt. |
+| [dbt-churn-prediction](flight-plans/dbt-churn-prediction) | example | Build churn feature and label tables with dbt for downstream scoring. |
+| [dbt-ducklake](flight-plans/dbt-ducklake) | example | Run TPC-DS dbt models on a DuckLake-backed database (`features: ducklake`). |
 
-### Data Ingestion
+## Examples
 
-- **[python-ingestion](python-ingestion)** - Python data ingestion patterns (small and large datasets)
-- **[dbt-ingestion-s3](dbt-ingestion-s3)** - Ingest data from S3 using dbt (local, cloud, and Flights)
+### dbt and transformation
 
-### dbt Patterns
+- [dbt-ai-prompt](dbt-ai-prompt) - Extract structured data from review text with dbt and `prompt()`.
+- [dbt-dual-execution](dbt-dual-execution) - Run dbt models across local DuckDB and MotherDuck.
+- [dbt-local-ducklake](dbt-local-ducklake) - Run dbt on a local DuckLake catalog (`features: ducklake`).
+- [dbt-metricflow](dbt-metricflow) - Define and query metrics with dbt MetricFlow.
+- [sqlmesh-demo](sqlmesh-demo) - Transform stock data with SQLMesh and dlt.
 
-- **[dbt-ai-prompt](dbt-ai-prompt)** - Use AI functions in dbt to transform unstructured text
-- **[dbt-churn-prediction](dbt-churn-prediction)** - Build a SQL-first churn prediction queue with dbt and MotherDuck native storage
-- **[dbt-dual-execution](dbt-dual-execution)** - Run dbt models across local and cloud databases
-- **[dbt-ducklake](dbt-ducklake)** - Run TPC-DS dbt models on DuckLake and MotherDuck
-- **[dbt-metricflow](dbt-metricflow)** - Build semantic layer with MetricFlow (local and cloud)
+### Ingestion and replication
 
-### Data Replication
+- [python-ingestion](python-ingestion) - Ingest API data into MotherDuck with the Python client.
+- [dlt-db-replication](dlt-db-replication) - Replicate PostgreSQL tables to MotherDuck with dlt.
 
-- **[dlt-db-replication](dlt-db-replication)** - Replicate PostgreSQL to MotherDuck using DLT
+### Apps, serverless, and edge
 
-### Serverless & Edge
+- [cloudflare-workers](cloudflare-workers) - Query MotherDuck from Cloudflare Workers via the Postgres endpoint (`features: pg_endpoint`).
+- [cloudflare-workers-duckoffee](cloudflare-workers-duckoffee) - Full-stack Worker: world map, live chart, and Durable Object voting on a MotherDuck share (`features: pg_endpoint`).
+- [vercel-nextjs](vercel-nextjs) - Query MotherDuck from Vercel and Next.js API routes (`features: pg_endpoint`).
+- [vercel-agent-analytics](vercel-agent-analytics) - Capture a Vercel log drain and classify AI-agent traffic in MotherDuck.
+- [nodejs-motherduck](nodejs-motherduck) - Connect from Node.js with the DuckDB Neo driver, including a connection pool.
 
-- **[cloudflare-workers](cloudflare-workers)** - Query MotherDuck from Cloudflare Workers via the Postgres endpoint
-- **[cloudflare-workers-duckoffee](cloudflare-workers-duckoffee)** - Full-stack Cloudflare Workers demo: world map, live sales chart, and Durable Object voting, all backed by a MotherDuck share
-- **[vercel-nextjs](vercel-nextjs)** - Query MotherDuck from Vercel + Next.js API routes via the Postgres endpoint
+### Integrations and UI
 
-### Integrations
+- [postgres-demo](postgres-demo) - Bridge local Postgres and MotherDuck with pg_duckdb.
+- [motherduck-grafana](motherduck-grafana) - Visualize MotherDuck data in Grafana.
+- [motherduck-ui](motherduck-ui) - Clean and analyze a CSV in the MotherDuck UI.
 
-- **[motherduck-grafana](motherduck-grafana)** - Connect Grafana to MotherDuck for visualization
+## Anatomy of an example
 
-### Templates
+Every example README starts with YAML front matter holding exactly six keys:
 
-- **[templates/flights/dbt-runner](templates/flights/dbt-runner)** - Reusable Flight template that clones a dbt project, writes a runtime profile, runs dbt, and records an audit row
-- **[templates/dives](templates/dives)** - Reserved location for reusable Dive templates
+```yaml
+---
+title: Build Hacker News Models From S3 With dbt
+id: dbt-ingestion-s3            # must equal the folder name
+description: >-
+  One or two sentences on what it does, then a "Use when ..." clause so an
+  agent can route to it.
+type: example                   # example | template
+features: [flights]             # subset of: dives, ducklake, flights, pg_endpoint, wasm; [] if none
+tags: [dbt, s3, parquet, hacker-news]   # lowercase slugs: tools, datasets, topics
+---
+```
 
-Template-backed recipes are checked by [`scripts/check-flight-template-sync.py`](scripts/check-flight-template-sync.py) so example Flight source stays in sync with the reusable template. Metadata is checked by [`scripts/check-meta.py`](scripts/check-meta.py).
+- `type` is `example` (a concrete, worked instance) or `template` (a generic plan
+  an agent parameterizes).
+- `features` names the MotherDuck capabilities the code actually uses. Use
+  `flights` for Flight Plans, `pg_endpoint` for the MotherDuck Postgres endpoint,
+  `ducklake` for DuckLake, `wasm` for the in-browser client, `dives` for a Dive.
+- `tags` are free lowercase slugs for third-party tools, datasets, and topics.
+  Do not use `motherduck` or `dbt-duckdb` as tags.
 
-## Getting a starter project
+The body follows a consistent, skimmable structure:
 
-Each starter project is self-contained. You can:
+1. `# <title>` and one paragraph on what it is and the MotherDuck pattern it shows.
+2. `## What you'll adjust` - a table of the real knobs found in the code, each with
+   its purpose and options or an example value.
+3. `## Questions to ask the user` - the inputs an agent should gather before
+   adapting the example.
+4. `## Run it` - exact commands for the project's runtime, plus a
+   `### Deploy as a Flight` subsection for Flight Plans.
+5. `## How it works / Learn more` - progressive disclosure: links to extra
+   in-folder files, and pointers to the MotherDuck MCP guides (`get_flight_guide`,
+   `get_dive_guide`) and `ask_docs_question` instead of duplicating them.
 
-1. **Clone the entire repo** and navigate to a folder:
+## Authoring and validation
+
+- Flight Plans (anything with `features: [flights]`) live under `flight-plans/`.
+- Shared dbt-on-Flights logic lives in
+  [`flight-plans/dbt-runner`](flight-plans/dbt-runner); the dbt example plans
+  adapt it. They are no longer kept byte-identical, so each plan can diverge.
+- Validate front matter and build the catalog with:
+
+  ```bash
+  uv run scripts/build-catalog.py                 # validate only
+  uv run scripts/build-catalog.py --output catalog.json   # write the catalog
+  ```
+
+  The catalog shape is defined by [`catalog.schema.json`](catalog.schema.json).
+
+## Getting an example
+
+Each example is self-contained. You can:
+
+1. **Use the get-starter script** (recommended):
+   ```bash
+   curl -fsSL https://get.motherduck.com | bash -s dbt-ingestion-s3
+   ```
+   It uses git sparse checkout to fetch only that folder (resolving a Flight Plan
+   under `flight-plans/` automatically) and drops it into a clean folder without
+   git history.
+
+   **Testing from a PR branch**: set `BRANCH` and fetch the script from that
+   branch (since `get.motherduck.com` always serves `main`):
+   ```bash
+   BRANCH=my-branch curl -fsSL https://raw.githubusercontent.com/motherduckdb/motherduck-examples/my-branch/scripts/get-starter.sh | bash -s dbt-ingestion-s3
+   ```
+
+2. **Clone the repo** and navigate to a folder:
    ```bash
    git clone https://github.com/motherduckdb/motherduck-examples.git
-   cd motherduck-examples/<starter-name>
+   cd motherduck-examples/flight-plans/dbt-ingestion-s3
    ```
 
-2. **Copy a folder** manually to start your project:
+3. **Copy a folder** to start your project:
    ```bash
-   cp -r <starter-name> my-new-project
-   cd my-new-project
-   ```
-
-3. **Use the get-starter script** (recommended):
-   ```bash
-   curl -fsSL https://get.motherduck.com | bash -s <starter-name>
-   ```
-
-   This will download only the starter project you need. For example:
-   ```bash
-   curl -fsSL https://get.motherduck.com | bash -s dbt-ai-prompt
-   ```
-
-   The script will:
-   - Download only the selected starter project (not the entire repo)
-   - Use git sparse checkout to fetch just the needed folder
-   - Create a clean copy without git history
-
-   **Testing from a PR branch**: set the `BRANCH` environment variable and fetch the script from that branch directly (since `get.motherduck.com` always serves the `main` version):
-   ```bash
-   BRANCH=my-branch curl -fsSL https://raw.githubusercontent.com/motherduckdb/motherduck-examples/my-branch/scripts/get-starter.sh | bash -s dbt-ai-prompt
+   cp -r flight-plans/dbt-ingestion-s3 my-new-project
    ```
 
 ## Requirements
 
-Most starter projects require:
-- **MotherDuck account** - [Sign up](https://motherduck.com) (free tier available)
-- **MotherDuck token** - Get from [Settings → Access Tokens](https://app.motherduck.com)
-- **dbt** - For dbt-based starter projects (installed via project dependencies)
+Most examples require:
 
-See each starter project's README for specific requirements.
+- **MotherDuck account** - [sign up](https://motherduck.com) (free tier available)
+- **MotherDuck token** - from [Settings -> Access Tokens](https://app.motherduck.com)
+- Tooling specific to each example (dbt, Node.js, Docker, etc.)
 
-## Cookbook metadata
-
-Recipes and templates can include a `meta.yml` sidecar file. This keeps GitHub READMEs readable while giving the docs site and product UIs a stable catalog format.
-
-Recipe metadata uses:
-
-```yaml
-metadata_version: 1
-id: dbt-ingestion-s3
-kind: recipe
-title: Build Hacker News models from S3 with dbt
-description: Query public Hacker News Parquet data in S3 and build dbt models.
-features:
-  - flights
-categories:
-  - ingestion
-  - transformation
-tags:
-  - dbt
-  - s3
-standalone: true
-entrypoints:
-  docs: README.md
-```
-
-Template metadata uses:
-
-```yaml
-metadata_version: 1
-id: dbt-runner
-kind: flight_template
-title: dbt Runner
-description: Run a dbt project from a Flight.
-features:
-  - flights
-categories:
-  - transformation
-tags:
-  - dbt
-entrypoints:
-  source: flight.py
-  requirements: requirements.txt
-```
-
-Use `features` only for MotherDuck features that can drive product surfaces:
-`dives`, `ducklake`, `flights`, `pg_endpoint`, and `wasm`.
-
-Use `categories` from the fixed cookbook taxonomy:
-`analytics`, `application`, `ingestion`, `lakehouse`, `machine-learning`,
-`orchestration`, and `transformation`.
-
-Use `tags` for third-party tools, datasets, and topics, such as `dbt`, `s3`, or
-`hacker-news`. Validate metadata with:
-
-```bash
-uv run scripts/check-meta.py
-```
+See each example's README for its exact prerequisites and commands.

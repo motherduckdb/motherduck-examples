@@ -53,6 +53,9 @@ dbt_modules/
 .coverage
 htmlcov/
 
+# Generated catalog preview
+.catalog-pages/
+
 # Node
 node_modules/
 **/node_modules/
@@ -63,4 +66,3 @@ node_modules/
 
 # OS
 Thumbs.db
-

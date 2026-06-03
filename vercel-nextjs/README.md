@@ -1,122 +1,75 @@
-# Query MotherDuck from Vercel + Next.js
+---
+title: Query MotherDuck from Vercel and Next.js
+id: vercel-nextjs
+description: >-
+  Next.js API routes that query MotherDuck over the Postgres wire protocol with
+  the node-postgres driver, no DuckDB binary needed. Use when building a Vercel
+  (or any Node serverless) backend that reads MotherDuck data through pooled,
+  parameterized SQL.
+type: example
+features: [pg_endpoint]
+tags: [vercel, nextjs, postgres, node-postgres, serverless, nyc-taxi]
+---
 
-Query NYC taxi data on MotherDuck using the Postgres wire protocol from Next.js API routes — no DuckDB binary needed.
+# Query MotherDuck from Vercel and Next.js
 
-## Prerequisites
+This is a Next.js app whose API routes connect to MotherDuck through the Postgres
+wire protocol endpoint using the `pg` (node-postgres) driver. It shows the
+serverless-friendly MotherDuck pattern: a module-level connection pool reused
+across warm function invocations, SSL certificate verification, input validation,
+and parameterized queries against the public `sample_data.nyc.taxi` dataset.
 
-- [Node.js](https://nodejs.org/) (v18+)
-- [Vercel account](https://vercel.com/signup)
-- [MotherDuck account](https://motherduck.com/) and access token
+## What you'll adjust
 
-## Setup
+| Setting | Purpose | Options / example |
+| --- | --- | --- |
+| `MOTHERDUCK_TOKEN` env var | MotherDuck access token used as the connection password | Service-account token from your MotherDuck settings |
+| `MOTHERDUCK_HOST` env var | Postgres endpoint host, selects the region | `pg.us-east-1-aws.motherduck.com` (default), `pg.eu-central-1-aws.motherduck.com` for EU |
+| `MOTHERDUCK_DB` env var | Database in the connection string | `sample_data` (default), or your own database |
+| `connectionString` in `src/lib/motherduck.ts` | How the pool authenticates, fixed at port `5432` | `postgresql://user:${token}@${host}:5432/${db}` |
+| Pool options in `src/lib/motherduck.ts` | Pooling behavior for serverless concurrency | `max: 10`, `idleTimeoutMillis: 5000` |
+| `ssl` option in `src/lib/motherduck.ts` | TLS verification level | `{ rejectUnauthorized: true }` (equivalent to `sslmode=verify-full`) |
+| SQL in `src/app/api/trips/route.ts` | The "recent trips" query and row limit | Change `FROM nyc.taxi`, columns, `LIMIT 20` |
+| SQL in `src/app/api/stats/route.ts` | The aggregate query and its `$1`/`$2` date params | Swap the table, columns, and the `datePattern` validation regex |
+
+## Questions to ask the user
+
+- Which MotherDuck database and schema should the routes read from (default is `sample_data.nyc.taxi`)?
+- Which region is the account in, so the right `MOTHERDUCK_HOST` is set (US vs EU)?
+- What tables and columns do the API routes need to expose, and what query parameters drive them?
+- How will the token be provisioned in production: manual `vercel env add` or the MotherDuck Native Integration on Vercel?
+- What concurrency is expected, so the pool `max` and idle timeout can be tuned?
+
+## Run it
+
+Prerequisites: Node.js v18+, a MotherDuck account and access token, and (for deploy) a Vercel account.
 
 ```sh
-cd vercel-nextjs
 npm install
+cp .env.local.example .env.local   # then set MOTHERDUCK_TOKEN
+npm run dev                         # http://localhost:3000
 ```
 
-Copy the example env file and add your MotherDuck token:
-
-```sh
-cp .env.local.example .env.local
-```
-
-Edit `.env.local` and replace `your_token_here` with your MotherDuck access token.
-
-## Local development
-
-```sh
-npm run dev
-```
-
-## Routes
-
-### `GET /api/trips`
-
-Returns the 20 most recent taxi trips from `sample_data.nyc.taxi`.
-
-### `GET /api/stats?start=YYYY-MM-DD&end=YYYY-MM-DD`
-
-Returns total passengers and total fare for the given date range.
-
-**Parameters:**
-
-- `start` — Start date (required, YYYY-MM-DD)
-- `end` — End date (required, YYYY-MM-DD)
-
-**Example:**
+Try the routes:
 
 ```text
-/api/stats?start=2022-11-01&end=2022-12-01
+GET /api/trips
+GET /api/stats?start=2022-11-01&end=2022-12-01
 ```
 
-```json
-{
-  "start": "2022-11-01",
-  "end": "2022-12-01",
-  "total_passengers": 1234567,
-  "total_fare": 1234567.89
-}
-```
-
-## Deploy
-
-Push to a Vercel-connected Git repository, or deploy manually:
+Build and deploy to Vercel:
 
 ```sh
+npm run build
 npx vercel deploy
+npx vercel env add MOTHERDUCK_TOKEN   # if not using the MotherDuck Native Integration
 ```
 
-Add your token as a production environment variable:
+If you install the [MotherDuck Native Integration](https://vercel.com/marketplace/motherduck) on Vercel, the access token is injected as an environment variable automatically.
 
-```sh
-npx vercel env add MOTHERDUCK_TOKEN
-```
+## How it works / Learn more
 
-If you installed the [MotherDuck Native Integration](https://vercel.com/marketplace/motherduck), your access token is already available as an environment variable.
-
-## Connection details
-
-This example connects to MotherDuck via the [Postgres wire protocol endpoint](https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/postgres-endpoint) at `pg.us-east-1-aws.motherduck.com:5432`. The `sample_data` database is available on every MotherDuck account. If you're connecting to an EU organization you can use `pg.eu-central-1-aws.motherduck.com:5432`.
-
-### Connection pooling
-
-The example uses a module-level `pg.Pool` so connections are reused across requests within the same function instance. [`attachDatabasePool`](https://vercel.com/kb/guide/connection-pooling-with-functions) from `@vercel/functions` ensures idle connections are cleaned up before instance suspension.
-
-### SSL
-
-The connection uses `ssl: { rejectUnauthorized: true }` which is equivalent to PostgreSQL's `sslmode=verify-full` — Node.js verifies the server certificate against the system CA bundle and checks hostname matching. MotherDuck's endpoint uses a publicly trusted certificate, so no custom CA is needed.
-
-## Security
-
-Make sure to always sanitize your inputs whenever you accept input into your application. To minimize risks you can:
-
-### 1. Validate inputs
-
-We use a regex to check for YYYY-MM-DD format input.
-
-```js
-const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-if (!datePattern.test(startDate) || !datePattern.test(endDate)) {
-  return NextResponse.json(
-    { error: "Invalid date format. Use YYYY-MM-DD." },
-    { status: 400 }
-  );
-}
-```
-
-### 2. Use parameterized inputs
-
-Instead of directly inserting text input into your query, it is safer to use named or numbered parameters. Make sure to use the native type (`Date()`, `Int()`, etc.) you want to use in your query.
-
-```js
-const result = await client.query(
-  `SELECT
-    sum(passenger_count)::INTEGER AS total_passengers,
-    round(sum(fare_amount), 2) AS total_fare
-  FROM nyc.taxi
-  WHERE tpep_pickup_datetime >= $1
-    AND tpep_pickup_datetime < $2`,
-  [new Date(startDate), new Date(endDate)]
-);
-```
+- `src/lib/motherduck.ts`: the shared `pg.Pool` plus `attachDatabasePool` from `@vercel/functions`, which cleans up idle connections before a function instance is suspended.
+- `src/app/api/trips/route.ts` and `src/app/api/stats/route.ts`: the two API handlers, including the `YYYY-MM-DD` regex validation and the parameterized `$1`/`$2` aggregate so untrusted input never lands in raw SQL.
+- Postgres endpoint reference: [authenticating and connecting via the Postgres endpoint](https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/postgres-endpoint). The endpoint listens on port `5432`; pick the host for your region.
+- For deeper MotherDuck or DuckDB SQL questions, use the `ask_docs_question` MCP tool or the MotherDuck docs.

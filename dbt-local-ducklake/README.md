@@ -1,173 +1,77 @@
-# Local DuckLake Integration with dbt and TPC-H
+---
+title: Run dbt on a Local DuckLake Catalog
+id: dbt-local-ducklake
+description: >-
+  A dbt-duckdb project that materializes TPC-H parquet into a DuckLake catalog,
+  using local Postgres or SQLite for metadata and a folder of parquet files for
+  storage. Use when you want a lakehouse-style catalog (table versioning,
+  snapshots, file compaction) for local dbt development that mirrors a managed
+  DuckLake on MotherDuck.
+type: example
+features: [ducklake]
+tags: [dbt, ducklake, duckdb, tpc-h, parquet, postgres, sqlite]
+---
 
-This project demonstrates how to use DuckLake locally with dbt to manage TPC-H benchmark data. DuckLake is DuckDB's extension that provides a lakehouse-style catalog on top of local storage, giving you Iceberg-like table management without the cloud overhead. Perfect for local development and testing!
+# Run dbt on a Local DuckLake Catalog
 
-## What is DuckLake?
+This project reads TPC-H parquet files as dbt sources and materializes them as tables in a DuckLake catalog. DuckLake is a DuckDB extension that adds Iceberg-style catalog management (snapshots, table versioning, file compaction) on top of plain parquet, with the metadata kept in a separate Postgres or SQLite database. The same `attach` pattern points at a fully managed DuckLake on MotherDuck by swapping one target, so you can develop against a local catalog and ship to `md:`.
 
-DuckLake is a DuckDB extension that adds catalog management capabilities to your local DuckDB database. It uses either SQLite or PostgreSQL as a metadata store while keeping your actual data in parquet files. Think of it as a lightweight lakehouse right on your laptop.
+## What you'll adjust
 
-## Architecture
+| Setting | Purpose | Options / example |
+| --- | --- | --- |
+| `target` (profiles.yml) | Which DuckLake backend dbt runs against | `local` (Postgres metadata, ships as default) or `motherduck` (attaches `md:jdw_ducklake`); add a `local_sqlite` target for the zero-dependency SQLite path |
+| `attach.path` (profiles.yml) | The DuckLake catalog connection string | `ducklake:postgres:`, `ducklake:sqlite:ducklake.db`, or `md:<your_ducklake_db>` with `is_ducklake: true` |
+| `attach.options.data_path` | Where DuckLake writes its parquet data files (local targets) | `data_files` (default); any local or object-storage path |
+| `secrets.ducklake_secret` (profiles.yml) | Postgres metadata store for the `local` target | `host: localhost`, `port: 5432`, `database: ducklake_catalog` |
+| `extensions.ducklake.repo` | DuckLake extension channel | `core_nightly` (current); pin to a release once available |
+| `external_location` (models/tpch/raw/_sources.yml) | Where raw parquet sources are read from | `data/{name}.parquet`; repoint to your own files or an `s3://`/`https://` path |
+| `tables` (models/tpch/raw/_sources.yml) | Which source tables dbt knows about | the 8 TPC-H tables; replace with your own source list |
+| `models.dbt_local_ducklake.tpch` (dbt_project.yml) | Where models land in the catalog | `raw` -> `catalog.raw` (tables), `queries` -> `catalog.prep` (tables) |
+| TPC-H scale factor | Size of the generated benchmark data | `--scale-factor 10` (~10GB); lower it (e.g. `1`) for a fast local run |
+| `maintain_ducklake()` (macros/ducklake_maintenance.sql) | Compaction and snapshot cleanup cadence | merges adjacent files, then `ducklake_expire_snapshots(... older_than => now() - INTERVAL '1 minute')` and `ducklake_cleanup_old_files`; tune the interval |
 
-This project uses a simple, local-first architecture:
+## Questions to ask the user
 
-1. **Data Generation**: TPC-H data generated locally using `tpchgen-cli` at scale factor 10
-2. **Storage Layer**: Parquet files stored in the `data/` directory
-3. **Catalog Layer**: DuckLake manages metadata using SQLite (stored in `ducklake_sqlite.db`)
-4. **Transform Layer**: dbt models that read from local parquet and materialize tables in the DuckLake catalog
+- Which DuckLake backend: local Postgres, local SQLite, or a managed catalog on MotherDuck (`md:`)?
+- What is the source data: keep TPC-H, or repoint `external_location` to their own parquet / object-storage path?
+- What scale factor should the benchmark data use (full 10GB vs a small dev sample)?
+- Which target database and schema should models materialize into (defaults: `catalog.raw` and `catalog.prep`)?
+- For the local Postgres target, what are the metadata store credentials (host, port, database)?
+- Should DuckLake maintenance (compaction, snapshot expiry) run, and on what cadence?
 
-## Data Sources
+## Run it
 
-The project uses TPC-H benchmark data:
-- **Generated with**: `tpchgen-cli` at Scale Factor 10
-- **Location**: `data/` directory (local parquet files)
-- **Format**: Parquet
-- **Tables**: 8 TPC-H tables (`customer`, `lineitem`, `nation`, `orders`, `part`, `partsupp`, `region`, `supplier`)
-
-## Project Structure
-
-```
-dbt-local-ducklake/
-├── data/                    # TPC-H parquet files (generated via tpchgen-cli)
-│   ├── customer.parquet
-│   ├── lineitem.parquet
-│   ├── nation.parquet
-│   ├── orders.parquet
-│   ├── part.parquet
-│   ├── partsupp.parquet
-│   ├── region.parquet
-│   └── supplier.parquet
-├── models/
-│   └── tpch/
-│       ├── raw/             # TPC-H base tables (materialized in DuckLake)
-│       │   ├── _sources.yml
-│       │   ├── customer.sql
-│       │   └── ... (8 tables total)
-│       └── queries/         # Analytical queries
-│           └── test.sql
-├── ducklake_sqlite.db       # SQLite metadata catalog
-├── ducklake_files/          # DuckLake managed parquet files
-└── profiles.yml
-```
-
-## Configuration
-
-### Profiles.yml
-
-The project supports two DuckLake backends:
-
-**Option 1: SQLite Backend (default)**
-```yaml
-dbt_local_ducklake:
-  outputs:
-    local_sqlite:
-      type: duckdb
-      threads: 4
-      extensions:
-        - ducklake
-        - sqlite
-      attach:
-        - path: "ducklake:sqlite:ducklake_sqlite.db"
-          alias: catalog
-          options:
-            data_path: ducklake_files
-  target: local_sqlite
-```
-
-**Option 2: PostgreSQL Backend**
-```yaml
-local:
-  type: duckdb
-  threads: 4
-  extensions:
-    - ducklake
-    - postgres
-  secrets:
-    - name: ducklake_secret
-      type: postgres
-      host: localhost
-      port: 5432
-      database: ducklake_catalog
-  attach:
-    - path: "ducklake:postgres:"
-      alias: catalog
-      options:
-        data_path: data_files
-        meta_secret: ducklake_secret
-```
-
-### Model Configuration
-- **Raw tables**: Materialized as tables in the DuckLake catalog with `raw` schema
-- **Source data**: Read from local parquet files in `data/` directory
-- **Catalog**: Attached as `catalog` database in DuckDB
-
-## Data Flow
-
-```mermaid
-graph LR
-    A[tpchgen-cli] -->|SF 10| B[data/*.parquet]
-    B -->|dbt source| C[dbt Models]
-    C -->|materialize| D[DuckLake Catalog]
-    D -->|metadata| E[ducklake_sqlite.db]
-    D -->|data files| F[ducklake_files/]
-```
-
-## Running the Project
-
-### Prerequisites
-- Python environment with `uv` installed
-- dbt-duckdb
-
-### Setup
-
-1. **Generate TPC-H data** (if not already present):
-   ```bash
-   # Install tpchgen-cli if needed
-   pip install tpchgen-cli
-   
-   # Generate TPC-H data at scale factor 10
-   tpchgen-cli --scale-factor 10 --output-dir data --format=parquet
-   ```
-
-2. **Install dbt dependencies**:
-   ```bash
-   uv sync
-   ```
-
-3. **Build the project**:
-   ```bash
-   uv run dbt build
-   ```
-
-This will:
-- Read TPC-H parquet files from the `data/` directory
-- Create 8 TPC-H tables in the DuckLake catalog
-- Store metadata in SQLite and data files in `ducklake_files/`
-
-### Running Queries
-
-Once built, you can query your data using dbt or directly with DuckDB:
+Prerequisites: `uv`, and the metadata backend for your chosen target. The default `local` target needs a reachable Postgres with a `ducklake_catalog` database; the SQLite path needs nothing extra. The `motherduck` target needs a MotherDuck account and `motherduck_token` set in the environment.
 
 ```bash
-# Run dbt models
-uv run dbt run
+# Install dbt-core, dbt-duckdb, duckdb, and tpchgen-cli into a managed venv
+uv sync
 
-# Run specific models
+# Generate TPC-H source parquet into data/ (drop --scale-factor for a smaller set)
+uv run tpchgen-cli --scale-factor 10 --output-dir data --format=parquet
+
+# Build the raw tables and queries into the DuckLake catalog
+uv run dbt build
+
+# Run against MotherDuck-managed DuckLake instead of the local backend
+uv run dbt build --target motherduck
+
+# Build a single model
 uv run dbt run --select customer
-
-# Open DuckDB REPL with catalog attached
-duckdb -c "INSTALL ducklake; LOAD ducklake; ATTACH 'ducklake:sqlite:ducklake_sqlite.db' AS catalog; USE catalog; SELECT * FROM raw.customer LIMIT 10;"
 ```
 
-## Why DuckLake Locally?
+Run the maintenance macro on demand to compact files and expire old snapshots:
 
-You might wonder: why use DuckLake for local development? Here are a few good reasons:
+```bash
+uv run dbt run-operation maintain_ducklake
+```
 
-1. **Catalog Management**: Get table versioning and metadata management without setting up a full lakehouse
-2. **Development Parity**: Match your production lakehouse patterns in local development
-3. **Flexible Backends**: Choose SQLite for simplicity or PostgreSQL for multi-user scenarios
-4. **Data Isolation**: Keep metadata separate from data files for easier management
-5. **Portable**: Your entire analytical database fits in a few files you can commit or share
+## How it works / Learn more
 
-## TPC-H Benchmark
-
-The TPC-H benchmark is an industry-standard decision support benchmark consisting of 8 tables and 22 analytical queries. At scale factor 10, this generates approximately 10GB of data across all tables, providing a realistic dataset for testing and development.
+- `profiles.yml`: the three DuckLake attach patterns (local Postgres, local SQLite shown in the prior README copy, and MotherDuck managed). The catalog is always aliased `catalog`, so models are backend-agnostic.
+- `models/tpch/raw/_sources.yml`: `external_location: data/{name}.parquet` is the dbt-duckdb pattern for reading parquet directly as sources, with no upstream load step.
+- `macros/ducklake_maintenance.sql`: discovers the DuckLake alias from `target.attach` and calls `merge_adjacent_files`, `ducklake_expire_snapshots`, and `ducklake_cleanup_old_files`.
+- `macros/schema.sql`: `generate_schema_name` is overridden to use schema names verbatim, so `+schema: raw` lands in `catalog.raw` rather than `<target>_raw`.
+- `models/tpch/queries/`: the 22 standard TPC-H analytical queries, materialized as tables in `catalog.prep`.
+- For when a managed DuckLake on MotherDuck is the right call (BYOB storage, own-compute access, file-aware maintenance), see the `motherduck-ducklake` skill. For deeper DuckLake or DuckDB SQL questions, use the `ask_docs_question` MCP tool.
