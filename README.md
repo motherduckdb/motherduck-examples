@@ -46,6 +46,7 @@ agent adapts one to a user's situation and deploys it as a MotherDuck Flight.
 - [dbt-ingestion-s3](dbt-ingestion-s3) - Build Hacker News models from Parquet in S3 with dbt; can deploy on a schedule as a Flight (`features: flights`).
 - [dbt-churn-prediction](dbt-churn-prediction) - Build churn feature and label tables with dbt for downstream scoring; can deploy as a Flight (`features: flights`).
 - [dbt-ducklake](dbt-ducklake) - Run TPC-DS dbt models on a DuckLake-backed database; can deploy as a Flight (`features: flights, ducklake`).
+- [dbt-duckdb-dwh-starter](dbt-duckdb-dwh-starter) - Build a MotherDuck warehouse with dbt-duckdb (Common Crawl + Hacker News) and deploy a Dive (`features: dives`).
 - [dbt-ai-prompt](dbt-ai-prompt) - Extract structured data from review text with dbt and `prompt()`.
 - [dbt-dual-execution](dbt-dual-execution) - Run dbt models across local DuckDB and MotherDuck.
 - [dbt-local-ducklake](dbt-local-ducklake) - Run dbt on a local DuckLake catalog (`features: ducklake`).
