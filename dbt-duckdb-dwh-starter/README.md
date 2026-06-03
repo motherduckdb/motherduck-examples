@@ -133,16 +133,16 @@ The script prints the deployed Dive URL.
 
 ## Files
 
-- `[dbt_project.yml](dbt_project.yml)` - project config and the `vars` knobs (`commoncrawl_domains`, `commoncrawl_snapshot`, `hackernews_max_stories_per_domain`) plus per-layer schema and materialization.
-- `[profiles.yml](profiles.yml)` - `dev` and `prod` DuckDB outputs reading `DBT_DUCKDB_PATH` / `DBT_SCHEMA` from the environment; the token comes from `MOTHERDUCK_TOKEN`.
-- `[models/staging/](models/staging/)` - source-backed tables: `commoncrawl/` (the three Common Crawl outputs over remote gzip, edges materialized incrementally) and `hackernews/` (reads the attached Hacker News share).
-- `[models/intermediate/](models/intermediate/)` - target-domain joins and edge expansion.
-- `[models/marts/](models/marts/)` - tested mart tables the Dive queries (`mart_domain_backlinks`, `mart_domain_link_graph`, `mart_hackernews_domain_stories`).
-- `[macros/commoncrawl.sql](macros/commoncrawl.sql)` - helpers for building the Common Crawl source URLs and reads.
-- `[dives/backlinks-hn/](dives/backlinks-hn/)` - the Dive: `dive.tsx` (React + SQL source with `__DBT_DATABASE__` / `__DBT_MART_SCHEMA__` placeholders) and `dive-manifest.json` (title, description, source file).
-- `[scripts/deploy-dive.sh](scripts/deploy-dive.sh)` - deploys a Dive from `dives/<name>/` via the DuckDB CLI and the `MD_CREATE_DIVE` / `MD_UPDATE_DIVE_CONTENT` functions.
-- `[pyproject.toml](pyproject.toml)` / `[uv.lock](uv.lock)` - Python dependencies (dbt-duckdb) managed with `uv`.
-- `[assets/backlinks-hn-dive.png](assets/backlinks-hn-dive.png)` - screenshot of the deployed Dive.
+- [`dbt_project.yml`](dbt_project.yml) - project config and the `vars` knobs (`commoncrawl_domains`, `commoncrawl_snapshot`, `hackernews_max_stories_per_domain`) plus per-layer schema and materialization.
+- [`profiles.yml`](profiles.yml) - `dev` and `prod` DuckDB outputs reading `DBT_DUCKDB_PATH` / `DBT_SCHEMA` from the environment; the token comes from `MOTHERDUCK_TOKEN`.
+- [`models/staging/`](models/staging/) - source-backed tables: `commoncrawl/` (the three Common Crawl outputs over remote gzip, edges materialized incrementally) and `hackernews/` (reads the attached Hacker News share).
+- [`models/intermediate/`](models/intermediate/) - target-domain joins and edge expansion.
+- [`models/marts/`](models/marts/) - tested mart tables the Dive queries (`mart_domain_backlinks`, `mart_domain_link_graph`, `mart_hackernews_domain_stories`).
+- [`macros/commoncrawl.sql`](macros/commoncrawl.sql) - helpers for building the Common Crawl source URLs and reads.
+- [`dives/backlinks-hn/`](dives/backlinks-hn/) - the Dive: `dive.tsx` (React + SQL source with `__DBT_DATABASE__` / `__DBT_MART_SCHEMA__` placeholders) and `dive-manifest.json` (title, description, source file).
+- [`scripts/deploy-dive.sh`](scripts/deploy-dive.sh) - deploys a Dive from `dives/<name>/` via the DuckDB CLI and the `MD_CREATE_DIVE` / `MD_UPDATE_DIVE_CONTENT` functions.
+- [`pyproject.toml`](pyproject.toml) / [`uv.lock`](uv.lock) - Python dependencies (dbt-duckdb) managed with `uv`.
+- [`assets/backlinks-hn-dive.png`](assets/backlinks-hn-dive.png) - screenshot of the deployed Dive.
 
 ## Caveats
 
