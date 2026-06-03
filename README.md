@@ -11,12 +11,13 @@ agent via the MotherDuck MCP server, and the `motherduck` CLI.
 
 There are two kinds of entry:
 
-- **Flight Plans** live under [`flight-plans/`](flight-plans) and deploy as a
-  MotherDuck Flight (Python runtime plus scheduling). They are non-deterministic
-  plans: an agent reads the README, asks the user a few questions, adapts the
-  snippet, and deploys it. They carry `features: [flights]`.
-- **Examples** at the top level are everything else: dbt projects, app and edge
-  integrations, ingestion scripts, and UI walkthroughs.
+- **Examples** at the repo root are standalone projects: dbt projects, app and
+  edge integrations, ingestion scripts, and UI walkthroughs. Some can also deploy
+  as a MotherDuck Flight, in which case they carry `features: [flights]` and a
+  "Deploy as a Flight" section.
+- **Flight templates** live under [`flight-plans/`](flight-plans): reusable,
+  single-file Flight programs (`type: template`) that an agent adapts to a user's
+  situation and deploys. This directory is only for template-style Flight files.
 
 ## Quick start
 
@@ -29,21 +30,22 @@ curl -fsSL https://get.motherduck.com | bash -s <name>
 curl -fsSL https://get.motherduck.com | bash -s dbt-ingestion-s3
 ```
 
-## Flight Plans
+## Flight templates
 
-Deploy as a MotherDuck Flight, on demand or on a schedule.
+Reusable, single-file Flight programs under [`flight-plans/`](flight-plans). An
+agent adapts one to a user's situation and deploys it as a MotherDuck Flight.
 
-| Plan | Type | What it does |
-|---|---|---|
-| [dbt-runner](flight-plans/dbt-runner) | template | Run any dbt project from git as a Flight. The base plan the others adapt. |
-| [dbt-ingestion-s3](flight-plans/dbt-ingestion-s3) | example | Build Hacker News models from Parquet in S3 with dbt. |
-| [dbt-churn-prediction](flight-plans/dbt-churn-prediction) | example | Build churn feature and label tables with dbt for downstream scoring. |
-| [dbt-ducklake](flight-plans/dbt-ducklake) | example | Run TPC-DS dbt models on a DuckLake-backed database (`features: ducklake`). |
+| Template | What it does |
+|---|---|
+| [dbt-runner](flight-plans/dbt-runner) | Run any dbt project from git as a MotherDuck Flight: clone, write a runtime profile, run dbt, record an audit row. |
 
 ## Examples
 
 ### dbt and transformation
 
+- [dbt-ingestion-s3](dbt-ingestion-s3) - Build Hacker News models from Parquet in S3 with dbt; can deploy on a schedule as a Flight (`features: flights`).
+- [dbt-churn-prediction](dbt-churn-prediction) - Build churn feature and label tables with dbt for downstream scoring; can deploy as a Flight (`features: flights`).
+- [dbt-ducklake](dbt-ducklake) - Run TPC-DS dbt models on a DuckLake-backed database; can deploy as a Flight (`features: flights, ducklake`).
 - [dbt-ai-prompt](dbt-ai-prompt) - Extract structured data from review text with dbt and `prompt()`.
 - [dbt-dual-execution](dbt-dual-execution) - Run dbt models across local DuckDB and MotherDuck.
 - [dbt-local-ducklake](dbt-local-ducklake) - Run dbt on a local DuckLake catalog (`features: ducklake`).
@@ -113,10 +115,12 @@ The body follows a consistent, skimmable structure:
 
 ## Authoring and validation
 
-- Flight Plans (anything with `features: [flights]`) live under `flight-plans/`.
+- `flight-plans/` is only for reusable, single-file Flight templates
+  (`type: template`). Concrete examples live at the repo root, even when they can
+  deploy as a Flight (`features: [flights]`).
 - Shared dbt-on-Flights logic lives in
-  [`flight-plans/dbt-runner`](flight-plans/dbt-runner); the dbt example plans
-  adapt it. They are no longer kept byte-identical, so each plan can diverge.
+  [`flight-plans/dbt-runner`](flight-plans/dbt-runner); the flight-capable dbt
+  examples adapt it. They are not kept byte-identical, so each can diverge.
 - Validate front matter and build the catalog with:
 
   ```bash
@@ -134,7 +138,7 @@ Each example is self-contained. You can:
    ```bash
    curl -fsSL https://get.motherduck.com | bash -s dbt-ingestion-s3
    ```
-   It uses git sparse checkout to fetch only that folder (resolving a Flight Plan
+   It uses git sparse checkout to fetch only that folder (resolving a template
    under `flight-plans/` automatically) and drops it into a clean folder without
    git history.
 
@@ -147,12 +151,12 @@ Each example is self-contained. You can:
 2. **Clone the repo** and navigate to a folder:
    ```bash
    git clone https://github.com/motherduckdb/motherduck-examples.git
-   cd motherduck-examples/flight-plans/dbt-ingestion-s3
+   cd motherduck-examples/dbt-ingestion-s3
    ```
 
 3. **Copy a folder** to start your project:
    ```bash
-   cp -r flight-plans/dbt-ingestion-s3 my-new-project
+   cp -r dbt-ingestion-s3 my-new-project
    ```
 
 ## Requirements

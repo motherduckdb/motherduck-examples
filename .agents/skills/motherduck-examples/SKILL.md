@@ -16,13 +16,16 @@ humans and agents.
 
 There are two entry families:
 
-- `flight-plans/`: Flight-deployable plans. These use `features: [flights]` and
-  deploy as MotherDuck Flights.
-- Top-level example folders: normal examples such as dbt projects, app demos,
-  ingestion scripts, UI walkthroughs, and integrations.
+- Top-level example folders: standalone projects such as dbt projects, app demos,
+  ingestion scripts, UI walkthroughs, and integrations. Some can also deploy as a
+  MotherDuck Flight and carry `features: [flights]` plus a "Deploy as a Flight"
+  section, but they still live at the repo root.
+- `flight-plans/`: reusable, single-file Flight templates (`type: template`) that
+  an agent adapts and deploys. This directory is purely for template-style Flight
+  files (for example `dbt-runner`), not concrete examples.
 
-Keep non-flight examples at the repo root. Do not create an `examples/` wrapper
-folder.
+Keep all examples at the repo root, even flight-capable ones. Do not create an
+`examples/` wrapper folder, and do not move concrete examples into `flight-plans/`.
 
 ## Durable Decisions
 
@@ -77,8 +80,10 @@ Rules:
   (`cloudflare-workers` when `cloudflare` exists), or anything already expressed
   as a feature (`pg_duckdb`, `ducklake`). Tags may be empty. Add a new tag to the
   list only for a significant new third-party thing.
-- READMEs under `flight-plans/` must include `flights`.
-- READMEs outside `flight-plans/` must not include `flights`.
+- `flight-plans/` is only for reusable Flight templates: items there must be
+  `type: template` and include `flights`. Concrete examples never live there.
+- Examples at the repo root may include `flights` when they can deploy as a
+  Flight; that does not move them under `flight-plans/`.
 - Nested or supporting READMEs may use `catalog: false` to opt out before normal
   required-field validation.
 
@@ -99,7 +104,8 @@ Use this structure:
 3. `## Questions to answer`: the information needed before adapting the example
    (source, target database/schema, load pattern, schedule, credentials).
 4. `## Run it`: local commands and environment variables.
-5. For Flight Plans only, include `### Deploy as a Flight`.
+5. For flight-capable entries (`features` includes `flights`), add a
+   `### Deploy as a Flight` subsection under `## Run it`.
 6. `## How it works / Learn more`: link to extra files in the folder and point
    to MCP guides such as `get_flight_guide`, `get_dive_guide`, or
    `ask_docs_question`.

@@ -210,14 +210,19 @@ def build_item(
     under_flight_plans = relative_dir == FLIGHT_PLANS_DIR or relative_dir.startswith(
         f"{FLIGHT_PLANS_DIR}/"
     )
-    if "flights" in features and not under_flight_plans:
-        raise CatalogError(
-            f"{readme_path}: plans with the flights feature must live under {FLIGHT_PLANS_DIR}/"
-        )
-    if under_flight_plans and "flights" not in features:
-        raise CatalogError(
-            f"{readme_path}: items under {FLIGHT_PLANS_DIR}/ must include the flights feature"
-        )
+    # flight-plans/ holds reusable, single-file Flight templates only. Concrete
+    # examples (even ones that can deploy as a Flight) live at the repo root and
+    # may carry the flights feature there.
+    if under_flight_plans:
+        if item_type != "template":
+            raise CatalogError(
+                f"{readme_path}: items under {FLIGHT_PLANS_DIR}/ must be type 'template' "
+                f"(reusable Flight templates); concrete examples live at the repo root"
+            )
+        if "flights" not in features:
+            raise CatalogError(
+                f"{readme_path}: items under {FLIGHT_PLANS_DIR}/ must include the flights feature"
+            )
 
     return {
         "id": item_id,

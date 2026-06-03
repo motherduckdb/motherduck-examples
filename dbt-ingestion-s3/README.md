@@ -77,7 +77,7 @@ con.execute(
 ```
 
 The same runner is published as a reusable template in
-[`../dbt-runner`](../dbt-runner); this folder is the worked example of it.
+[`flight-plans/dbt-runner`](../flight-plans/dbt-runner); this folder is the worked example of it.
 
 ## What you'll adjust
 

@@ -66,3 +66,6 @@ node_modules/
 
 # OS
 Thumbs.db
+
+# Local agent config (not catalog content)
+.claude/rules/

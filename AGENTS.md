@@ -10,12 +10,13 @@ or the starter script.
 - README front matter is the source of truth for catalog metadata.
 - The catalog is generated in CI and deployed to GitHub Pages. Do not commit a
   generated `catalog.json` unless the user explicitly changes that decision.
-- Flight-capable examples live under `flight-plans/` and carry
-  `features: [flights]`.
-- Top-level folders remain normal examples. Do not move them under a new
-  `examples/` folder.
-- Flight Plans are non-deterministic agent plans. Deployment guidance belongs in
-  README prose and MotherDuck MCP tool usage, not checked-in create-flight SQL.
+- `flight-plans/` is only for reusable, single-file Flight templates
+  (`type: template`), such as `dbt-runner`.
+- All concrete examples live at the repo root, including flight-capable ones that
+  carry `features: [flights]` and a "Deploy as a Flight" section. Do not move them
+  under `flight-plans/` or a new `examples/` folder.
+- Flight templates are non-deterministic agent plans. Deployment guidance belongs
+  in README prose and MotherDuck MCP tool usage, not checked-in create-flight SQL.
 - README bodies should read like compact agent skills: what to adjust, questions
   to ask, how to run, and where to progressively disclose more detail.
 

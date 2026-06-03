@@ -137,15 +137,38 @@ categories:
         build_catalog_module.build_catalog(repo_root)
 
 
-def test_flight_feature_requires_flight_plans_path(tmp_path: Path) -> None:
+def test_flights_feature_allowed_at_root(tmp_path: Path) -> None:
+    # Standalone examples that can also deploy as a Flight live at the repo root
+    # and may carry the flights feature there.
     repo_root = tmp_path / "repo"
     write_readme(
-        repo_root / "dbt-runner" / "README.md",
+        repo_root / "dbt-ingestion-s3" / "README.md",
         """
-title: Run Any dbt Project as a MotherDuck Flight
-id: dbt-runner
-description: Run dbt as a MotherDuck Flight.
-type: template
+title: Build Hacker News Models From S3 With dbt
+id: dbt-ingestion-s3
+description: A dbt example that can deploy as a Flight.
+type: example
+features:
+  - flights
+tags:
+  - dbt
+""",
+    )
+
+    catalog = build_catalog_module.build_catalog(repo_root)
+    assert catalog["items"][0]["features"] == ["flights"]
+
+
+def test_flight_plans_requires_template_type(tmp_path: Path) -> None:
+    # flight-plans/ is only for reusable Flight templates; an example there fails.
+    repo_root = tmp_path / "repo"
+    write_readme(
+        repo_root / "flight-plans" / "dbt-ingestion-s3" / "README.md",
+        """
+title: Build Hacker News Models From S3 With dbt
+id: dbt-ingestion-s3
+description: A concrete example should not live under flight-plans.
+type: example
 features:
   - flights
 tags:
@@ -155,7 +178,7 @@ tags:
 
     with pytest.raises(
         build_catalog_module.CatalogError,
-        match="plans with the flights feature must live under flight-plans/",
+        match="must be type 'template'",
     ):
         build_catalog_module.build_catalog(repo_root)
 
