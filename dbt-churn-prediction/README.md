@@ -5,10 +5,9 @@ description: >-
   dbt builds customer churn feature and label tables from raw customer,
   membership, usage, and payment history, plus a Python script that trains and
   scores a churn model on top. Use when you need a SQL-first churn feature
-  pipeline on MotherDuck that can run on a schedule, with model training kept as
-  a separate step.
+  pipeline on MotherDuck, with model training kept as a separate step.
 type: example
-features: [flights]
+features: []
 tags: [dbt, python, scikit-learn]
 ---
 
@@ -18,9 +17,9 @@ This example splits churn prediction into two jobs: a dbt project that turns raw
 customer history into a point-in-time feature matrix, churn labels, and a
 warehouse-side daily score table, and a Python script that trains and calibrates
 a scikit-learn model on those tables. The MotherDuck pattern it shows is a
-SQL-first feature pipeline you build once and refresh on a schedule (locally,
-in MotherDuck, or from a Flight), with model training as a downstream workflow
-rather than something baked into the warehouse.
+SQL-first feature pipeline you build once and refresh (locally or in MotherDuck),
+with model training as a downstream workflow rather than something baked into the
+warehouse.
 
 The order most teams actually use it: build a dataset, train a model, then
 predict churn for the current customer population. The bundled IBM Telco dataset
@@ -114,7 +113,7 @@ before adapting the model side.
 
 | Setting | Purpose | Options / example |
 | --- | --- | --- |
-| `MOTHERDUCK_DATABASE` (env / profiles.yml) | Target MotherDuck database for the `prod`/`flight` build | `subscription_churn` (default) |
+| `MOTHERDUCK_DATABASE` (env / profiles.yml) | Target MotherDuck database for the `prod` build | `subscription_churn` (default) |
 | `MOTHERDUCK_TOKEN` (env / `.env`) | Auth for MotherDuck runs | your account token |
 | profiles.yml target | Where dbt builds: local DuckDB file vs MotherDuck | `local` (`local.db`) or `prod` (`md:<db>`) |
 | `vars.churn_as_of_date` (dbt_project.yml) | The "today" the daily score table is computed against | `'2026-04-15'` |
@@ -124,7 +123,6 @@ before adapting the model side.
 | seeds (`seeds/raw_*.csv`) | Sample raw inputs to swap for your own customer, membership, usage, payment data | `raw_customers`, `raw_memberships`, `raw_usage_events`, `raw_payments` |
 | `--source` (training script) | Training data source | `ibm_telco` (runs immediately) or `dbt` (your built tables) |
 | `--write-schema` (training script) | Schema for Python prediction/metric tables written back | `science` (default) |
-| Flight env: `PROJECT_PATH`, `DBT_SELECT`, `DBT_EXCLUDE`, `RUN_DBT_SEED`, `DBT_SEED_FULL_REFRESH`, `DBT_TARGET`, `DBT_SCHEMA`, `DBT_PROFILE_NAME`, `REPO_REF`, `AUDIT_SCHEMA` | Knobs the Flight wrapper reads to clone, profile, and run dbt | see "Deploy as a Flight" |
 
 ## Questions to answer
 
@@ -133,14 +131,14 @@ before adapting the model side.
 - Target MotherDuck database and schema for the feature tables (default `subscription_churn`).
 - Full refresh each run, or incremental? Current models rebuild as tables; seeds use `--full-refresh`.
 - What "as of" date should the daily score table use (`churn_as_of_date`), and which historical snapshot dates should labels and features cover (`churn_label_dates()`)?
-- Should this run on a schedule, and at what cadence?
-- MotherDuck token / credentials for cloud and Flight runs.
+- Should the feature tables refresh on a schedule, and at what cadence?
+- MotherDuck token / credentials for cloud runs.
 - Train on the bundled IBM Telco benchmark first, or straight on your own dbt-built history?
 
 ## Run it
 
-Prerequisites: a MotherDuck account and token for cloud or Flight runs. Local
-DuckDB runs need no account. The project uses `uv`.
+Prerequisites: a MotherDuck account and token for cloud runs. Local DuckDB runs
+need no account. The project uses `uv`.
 
 ```sh
 # install dbt, DuckDB, pandas, scikit-learn, lifelines, etc.
@@ -172,40 +170,8 @@ optionally write predictions back:
 uv run python scripts/train_python_churn_models.py --source dbt --database "md:${MOTHERDUCK_DATABASE}" --write-schema science
 ```
 
-### Deploy as a Flight
-
-`flight.py` is the generic dbt-runner: it installs `git`, clones the repo at
-`REPO_REF`, writes a runtime `profiles.yml` pointed at your MotherDuck database,
-optionally seeds, runs the selected dbt command, and writes one audit row to
-`flight_audit.dbt_flight_runs`. This Flight covers only the warehouse
-feature-refresh part of the workflow; Python model training and scoring stay a
-separate step.
-
-1. Create a Flight from this folder's `flight.py` and `requirements.txt` using
-   the MotherDuck MCP `create_flight` tool.
-2. Set the knobs from "What you'll adjust" as Flight config/env so it runs the
-   churn refresh:
-   - `PROJECT_PATH=dbt-churn-prediction`
-   - `MOTHERDUCK_DATABASE=subscription_churn` (your target)
-   - `DBT_PROFILE_NAME=dbt_churn_prediction`
-   - `RUN_DBT_SEED=true`, `DBT_SEED_FULL_REFRESH=true`
-   - `DBT_SELECT=tag:churn_daily+`, `DBT_EXCLUDE=resource_type:seed`
-   - `REPO_REF=main` for testing; pin to a tag or commit for scheduled runs.
-3. This reproduces, inside the runtime:
-
-   ```sh
-   dbt seed --target flight --profiles-dir . --full-refresh
-   dbt build --target flight --profiles-dir . --select tag:churn_daily+ --exclude resource_type:seed
-   ```
-
-4. Optionally add a schedule (a daily run at `07:15 UTC` is a reasonable cadence
-   for a daily score table).
-5. Run it with the MCP `run_flight` tool, then check `flight_audit.dbt_flight_runs`
-   for the audit row.
-
 ## Files
 
-- [`flight.py`](flight.py) - the shared dbt-runner Flight: installs git, shallow-clones the repo at `REPO_REF`, writes a runtime `profiles.yml` for your MotherDuck database, optionally seeds, runs the selected dbt command, and writes one audit row to `flight_audit.dbt_flight_runs`.
 - [`scripts/train_python_churn_models.py`](scripts/train_python_churn_models.py) - the Python model side: loads the dataset (IBM Telco or dbt-built tables), trains and calibrates a scikit-learn churn model, evaluates it, and optionally writes prediction tables back to MotherDuck.
 - [`dbt_project.yml`](dbt_project.yml) - dbt project config: profile name, the `churn_as_of_date` and `member_churn_grace_period_days` vars, and per-folder materializations, schemas, and the `churn_daily` tag.
 - [`profiles.yml`](profiles.yml) - dbt connection profile with `local` (DuckDB file) and `prod` (`md:<db>`) targets.
@@ -215,7 +181,6 @@ separate step.
 - [`seeds/`](seeds/) - sample raw inputs (`raw_customers`, `raw_memberships`, `raw_usage_events`, `raw_payments` CSVs) plus `_seeds.yml`; swap these for your own customer, membership, usage, and payment history.
 - [`tests/`](tests/) - 8 singular SQL data-quality assertions (uniqueness per customer/day, risk scores in range, subscription censoring and duration consistency, label eligibility).
 - [`pyproject.toml`](pyproject.toml) - Python project deps for `uv sync` (dbt, DuckDB, pandas, scikit-learn, lifelines, matplotlib, joblib).
-- [`requirements.txt`](requirements.txt) - minimal deps (`duckdb`, `dbt-duckdb`) for the Flight runtime.
 - [`.env.example`](.env.example) - template for `MOTHERDUCK_TOKEN` and `MOTHERDUCK_DATABASE`; copy to `.env` (gitignored) for cloud runs.
 - `analyses/`, `macros/`, `snapshots/` - standard dbt scaffold dirs, currently placeholders (`.gitkeep`).
 - `uv.lock` - pinned dependency lockfile for `uv`.
@@ -240,26 +205,8 @@ separate step.
   (preferring an `analytics` schema), so the dbt build must have run first
   against the same database.
 - **Don't put your token in config.** `MOTHERDUCK_TOKEN` is a secret: keep it in
-  `.env` locally (gitignored) and as a Flight secret, not as a plain Flight
-  config value or committed file.
-- **The Flight runner defaults target a different example.** `flight.py` is the
-  shared dbt-runner and its built-in defaults (`PROJECT_PATH=dbt-ingestion-s3`,
-  `DBT_PROFILE_NAME=dbt_ingestion_s3`, `MOTHERDUCK_DATABASE=hacker_news_stats`)
-  are for the S3 ingestion example. You must override `PROJECT_PATH`,
-  `DBT_PROFILE_NAME`, and `MOTHERDUCK_DATABASE` or the Flight will build the
-  wrong project or fail to find it after clone.
-- **Identifier env vars are validated.** `DBT_PROFILE_NAME`, `DBT_SCHEMA`,
-  `DBT_TARGET`, and `AUDIT_SCHEMA` must be simple SQL identifiers
-  (`[A-Za-z_][A-Za-z0-9_]*`); anything else raises. `DBT_COMMAND` is restricted
-  to `build`, `run`, or `test`.
-- **The clone is shallow and single-ref.** `flight.py` does a `--depth 1` fetch
-  of `REPO_REF`. For reproducible scheduled runs, pin `REPO_REF` to a tag or
-  commit rather than `main`.
-- **`dbt deps` only runs when packages exist.** The runner installs packages
-  only if `packages.yml` or `dependencies.yml` is present, so a project that
-  needs deps but lacks those files will fail later in the build.
+  `.env` locally (gitignored), not as a committed file.
 
 ## Learn more
 
-- Flight runtime, scheduling, and secrets: run the `get_flight_guide` MCP tool.
 - Deeper MotherDuck or DuckDB questions: use the `ask_docs_question` MCP tool.

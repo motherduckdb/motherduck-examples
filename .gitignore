@@ -53,8 +53,10 @@ dbt_modules/
 .coverage
 htmlcov/
 
-# Generated catalog preview
+# Generated catalog outputs
 .catalog-pages/
+.catalog-preview/
+.catalog-release/
 
 # Node
 node_modules/

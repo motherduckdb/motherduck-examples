@@ -12,12 +12,11 @@ agent via the MotherDuck MCP server, and the `motherduck` CLI.
 There are two kinds of entry:
 
 - **Examples** at the repo root are standalone projects: dbt projects, app and
-  edge integrations, ingestion scripts, and UI walkthroughs. Some can also deploy
-  as a MotherDuck Flight, in which case they carry `features: [flights]` and a
-  "Deploy as a Flight" section.
+  edge integrations, ingestion scripts, and UI walkthroughs.
 - **Flight templates** live under [`flight-plans/`](flight-plans): reusable,
   single-file Flight programs (`type: template`) that an agent adapts to a user's
-  situation and deploys. This directory is only for template-style Flight files.
+  situation and deploys. This directory is reserved for template-style Flight
+  files.
 
 ## Quick start
 
@@ -30,22 +29,13 @@ curl -fsSL https://get.motherduck.com | bash -s <name>
 curl -fsSL https://get.motherduck.com | bash -s dbt-ingestion-s3
 ```
 
-## Flight templates
-
-Reusable, single-file Flight programs under [`flight-plans/`](flight-plans). An
-agent adapts one to a user's situation and deploys it as a MotherDuck Flight.
-
-| Template | What it does |
-|---|---|
-| [dbt-runner](flight-plans/dbt-runner) | Run any dbt project from git as a MotherDuck Flight: clone, write a runtime profile, run dbt, record an audit row. |
-
 ## Examples
 
 ### dbt and transformation
 
-- [dbt-ingestion-s3](dbt-ingestion-s3) - Build Hacker News models from Parquet in S3 with dbt; can deploy on a schedule as a Flight (`features: flights`).
-- [dbt-churn-prediction](dbt-churn-prediction) - Build churn feature and label tables with dbt for downstream scoring; can deploy as a Flight (`features: flights`).
-- [dbt-ducklake](dbt-ducklake) - Run TPC-DS dbt models on a DuckLake-backed database; can deploy as a Flight (`features: flights, ducklake`).
+- [dbt-ingestion-s3](dbt-ingestion-s3) - Build Hacker News models from Parquet in S3 with dbt, run locally or on MotherDuck.
+- [dbt-churn-prediction](dbt-churn-prediction) - Build churn feature and label tables with dbt, plus a Python model trained on top.
+- [dbt-ducklake](dbt-ducklake) - Run TPC-DS dbt models on a DuckLake-backed database (`features: ducklake`).
 - [dbt-duckdb-dwh-starter](dbt-duckdb-dwh-starter) - Build a MotherDuck warehouse with dbt-duckdb (Common Crawl + Hacker News) and deploy a Dive (`features: dives`).
 - [dbt-ai-prompt](dbt-ai-prompt) - Extract structured data from review text with dbt and `prompt()`.
 - [dbt-dual-execution](dbt-dual-execution) - Run dbt models across local DuckDB and MotherDuck.
@@ -72,6 +62,17 @@ agent adapts one to a user's situation and deploys it as a MotherDuck Flight.
 - [motherduck-grafana](motherduck-grafana) - Visualize MotherDuck data in Grafana.
 - [motherduck-ui](motherduck-ui) - Clean and analyze a CSV in the MotherDuck UI.
 
+## Flight templates
+
+Reusable, single-file Flights under [`flight-plans/`](flight-plans)
+(`type: template`) that an agent adapts and deploys. Deploy them with the
+MotherDuck MCP server (`get_flight_guide`, then `create_flight`); each README
+lists the config knobs to set.
+
+- [flight-scheduled-s3-ingest](flight-plans/flight-scheduled-s3-ingest) - Refresh a MotherDuck table from Hive-partitioned S3 Parquet on a schedule, reading only the partition that changes.
+- [flight-dlt-ingest](flight-plans/flight-dlt-ingest) - Run a dlt pipeline into MotherDuck on a schedule, with Parquet loader files and schema evolution.
+- [flight-provision-user-databases](flight-plans/flight-provision-user-databases) - Admin Flight that provisions a per-user database and restricted share from a users control table, and revokes access for inactive users (`features: shares`).
+
 ## Anatomy of an example
 
 Every example README starts with YAML front matter holding exactly six keys:
@@ -84,8 +85,8 @@ description: >-
   One or two sentences on what it does, then a "Use when ..." clause so an
   agent can route to it.
 type: example                   # example | template
-features: [flights]             # MotherDuck capabilities used; [] if none (see list below)
-tags: [dbt, s3, parquet, hacker-news]   # lowercase slugs: tools, datasets, topics
+features: []                    # MotherDuck capabilities used; [] if none (see list below)
+tags: [dbt]                     # curated lowercase slugs: significant third-party tools
 ---
 ```
 
@@ -108,8 +109,8 @@ The body follows a consistent, skimmable structure:
 2. `## What you'll adjust` - a table of the real knobs found in the code, each with
    its purpose and options or an example value.
 3. `## Questions to answer` - the inputs needed before adapting the example.
-4. `## Run it` - exact commands for the project's runtime, plus a
-   `### Deploy as a Flight` subsection for Flight Plans.
+4. `## Run it` - exact commands for the project's runtime (plus a
+   `### Deploy as a Flight` subsection for any flight-capable example).
 5. `## How it works / Learn more` - progressive disclosure: links to extra
    in-folder files, and pointers to the MotherDuck MCP guides (`get_flight_guide`,
    `get_dive_guide`) and `ask_docs_question` instead of duplicating them.
@@ -119,9 +120,6 @@ The body follows a consistent, skimmable structure:
 - `flight-plans/` is only for reusable, single-file Flight templates
   (`type: template`). Concrete examples live at the repo root, even when they can
   deploy as a Flight (`features: [flights]`).
-- Shared dbt-on-Flights logic lives in
-  [`flight-plans/dbt-runner`](flight-plans/dbt-runner); the flight-capable dbt
-  examples adapt it. They are not kept byte-identical, so each can diverge.
 - Validate front matter and build the catalog with:
 
   ```bash
@@ -130,6 +128,10 @@ The body follows a consistent, skimmable structure:
   ```
 
   The catalog shape is defined by [`catalog.schema.json`](catalog.schema.json).
+- On pushes to `main`, CI publishes `catalog.json` as a GitHub Release asset.
+  Download the latest catalog from
+  `https://github.com/motherduckdb/motherduck-examples/releases/latest/download/catalog.json`;
+  earlier versions remain available on earlier catalog releases.
 
 ## Getting an example
 

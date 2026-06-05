@@ -7,6 +7,7 @@ on:
       - "catalog.schema.json"
       - "scripts/build-catalog.py"
       - "tests/test_build_catalog.py"
+      - "tests/test_catalog_workflow.py"
       - ".github/workflows/catalog.yml"
   push:
     paths:
@@ -14,6 +15,7 @@ on:
       - "catalog.schema.json"
       - "scripts/build-catalog.py"
       - "tests/test_build_catalog.py"
+      - "tests/test_catalog_workflow.py"
       - ".github/workflows/catalog.yml"
   workflow_dispatch:
 
@@ -41,21 +43,21 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Run catalog tests
-        run: uv run --with pytest --with pyyaml --with jsonschema python -m pytest tests/test_build_catalog.py -q
+        run: uv run --with pytest --with pyyaml --with jsonschema python -m pytest tests/test_build_catalog.py tests/test_catalog_workflow.py -q
 
       - name: Build catalog preview
         run: |
           ref="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
-          mkdir -p .catalog-pages
+          mkdir -p .catalog-preview
           uv run scripts/build-catalog.py \
-            --output .catalog-pages/catalog.json \
+            --output .catalog-preview/catalog.json \
             --repo "${GITHUB_REPOSITORY}" \
             --ref "${ref}" \
             --schema-url "catalog.schema.json"
-          cp catalog.schema.json .catalog-pages/catalog.schema.json
+          cp catalog.schema.json .catalog-preview/catalog.schema.json
 
       - name: Validate catalog preview schema
-        run: uv run --with check-jsonschema check-jsonschema --schemafile catalog.schema.json .catalog-pages/catalog.json
+        run: uv run --with check-jsonschema check-jsonschema --schemafile catalog.schema.json .catalog-preview/catalog.json
 
       - name: Detect changed catalog READMEs
         id: catalog-source-changes
@@ -84,7 +86,7 @@ jobs:
               sort -u
           )
 
-          item_count="$(uv run python -c 'import json; from pathlib import Path; print(len(json.loads(Path(".catalog-pages/catalog.json").read_text())["items"]))')"
+          item_count="$(uv run python -c 'import json; from pathlib import Path; print(len(json.loads(Path(".catalog-preview/catalog.json").read_text())["items"]))')"
 
           if [[ "${#changed[@]}" -gt 0 ]]; then
             echo "has_changes=true" >> "${GITHUB_OUTPUT}"
@@ -103,7 +105,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: catalog-preview
-          path: .catalog-pages/
+          path: .catalog-preview/
           include-hidden-files: true
 
       - name: Comment catalog preview
@@ -184,20 +186,14 @@ jobs:
               })
             }
 
-  deploy:
-    name: Deploy catalog to GitHub Pages
+  release:
+    name: Publish catalog release
     needs: validate
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
-      pages: write
-      id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      contents: write
 
     steps:
       - name: Checkout
@@ -206,27 +202,46 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Build Pages catalog
+      - name: Build release catalog
         run: |
-          mkdir -p .catalog-pages
+          mkdir -p .catalog-release
           uv run scripts/build-catalog.py \
-            --output .catalog-pages/catalog.json \
+            --output .catalog-release/catalog.json \
             --repo "${GITHUB_REPOSITORY}" \
-            --ref "main" \
+            --ref "${GITHUB_SHA}" \
             --schema-url "catalog.schema.json"
-          cp catalog.schema.json .catalog-pages/catalog.schema.json
 
-      - name: Validate Pages catalog schema
-        run: uv run --with check-jsonschema check-jsonschema --schemafile catalog.schema.json .catalog-pages/catalog.json
+      - name: Validate release catalog schema
+        run: uv run --with check-jsonschema check-jsonschema --schemafile catalog.schema.json .catalog-release/catalog.json
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
+      - name: Prepare release metadata
+        id: release-metadata
+        run: |
+          short_sha="${GITHUB_SHA::12}"
+          tag="catalog-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}-${short_sha}"
+          item_count="$(uv run python -c 'import json; from pathlib import Path; print(len(json.loads(Path(".catalog-release/catalog.json").read_text())["items"]))')"
+          {
+            echo "tag=${tag}"
+            echo "title=Catalog ${short_sha}"
+            echo "item_count=${item_count}"
+          } >> "${GITHUB_OUTPUT}"
+          {
+            echo "Catalog generated from ${GITHUB_REPOSITORY}@${GITHUB_SHA}."
+            echo
+            echo "Items: ${item_count}"
+            echo
+            echo "Download latest catalog:"
+            echo "https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/catalog.json"
+          } > .catalog-release/release-notes.md
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: .catalog-pages/
-
-      - name: Deploy Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Create catalog release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.release-metadata.outputs.tag }}" \
+            "./.catalog-release/catalog.json#catalog.json" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${{ steps.release-metadata.outputs.title }}" \
+            --notes-file .catalog-release/release-notes.md \
+            --target "${GITHUB_SHA}" \
+            --latest
