@@ -145,6 +145,6 @@ npm run pool
 ## Learn more
 
 - `sample_data` is a public MotherDuck data share that every account can read; `sample_data.nyc.taxi` is the NYC taxi table used in these examples.
-- For the Node.js connection guide and connection pooling docs, see the [MotherDuck connection guide](https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/connecting-to-motherduck/) and the [Node.js multithreading guide](https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/multithreading-and-parallelism/multithreading-and-parallelism-nodejs/).
+- For the Node.js connection guide and connection pooling docs, see the [MotherDuck connection guide](https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/connecting-to-motherduck/) and the [multithreading and parallelism guide](https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/multithreading-and-parallelism/).
 - For creating an access token, see [Authenticating to MotherDuck](https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/authenticating-to-motherduck/#creating-an-access-token).
 - For deeper MotherDuck or DuckDB SQL questions, use the `ask_docs_question` MCP tool.
