@@ -114,7 +114,7 @@ JOIN <motherduck_table> AS md USING (id);
 
 ## How it works / Learn more
 
-- Loading data from Postgres into MotherDuck: [MotherDuck docs](https://motherduck.com/docs/key-tasks/loading-data-into-motherduck/loading-data-md-postgres/).
+- Loading data from Postgres into MotherDuck: [MotherDuck docs](https://motherduck.com/docs/key-tasks/loading-data-into-motherduck/loading-data-from-postgres/).
 - pg_duckdb (DuckDB embedded in Postgres) and the MotherDuck integration flag: the [pg_duckdb project](https://github.com/duckdb/pg_duckdb).
 - The DuckDB `postgres` extension used by the pg scanner: [DuckDB Postgres extension docs](https://duckdb.org/docs/extensions/postgres).
 - For deeper MotherDuck or DuckDB questions, run the `ask_docs_question` MCP tool.

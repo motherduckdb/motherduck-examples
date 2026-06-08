@@ -13,7 +13,7 @@ tags: [sqlmesh, dlt]
 
 # Transform Stock Data with SQLMesh on MotherDuck
 
-This example loads daily stock prices, company info, and option chains from Yahoo Finance into a MotherDuck database with [dlt](https://dlthub.com/), then transforms the raw `dlt` tables into analytics models with [SQLMesh](https://sqlmesh.com/). It is a re-implementation of the `matsonj/stocks` dbt demo on SQLMesh, and it shows the MotherDuck pattern of pointing a SQLMesh `motherduck` gateway at a cloud database and using SQLMesh model kinds (incremental by time range, SCD type 2, full, view) plus column-level audits to build a layered warehouse, all running against MotherDuck compute.
+This example loads daily stock prices, company info, and option chains from Yahoo Finance into a MotherDuck database with [dlt](https://dlthub.com/), then transforms the raw `dlt` tables into analytics models with [SQLMesh](https://sqlmesh.readthedocs.io/en/stable/). It is a re-implementation of the `matsonj/stocks` dbt demo on SQLMesh, and it shows the MotherDuck pattern of pointing a SQLMesh `motherduck` gateway at a cloud database and using SQLMesh model kinds (incremental by time range, SCD type 2, full, view) plus column-level audits to build a layered warehouse, all running against MotherDuck compute.
 
 The data flows in three stages: `dlt` writes raw tables into the `stock_data` schema, SQLMesh declares those raw tables as external models, then SQLMesh builds `interim` (typed and cleaned), `conformed` (business-ready), and `mart` (joined analytics) layers on top.
 
@@ -156,6 +156,6 @@ If SQLMesh cannot find your token during `info`/`plan`, make sure `MOTHERDUCK_TO
 
 ## Learn more
 
-- SQLMesh concepts used here (virtual data environments, model kinds, audits, cron): see the [SQLMesh docs](https://sqlmesh.readthedocs.io/).
+- SQLMesh concepts used here (virtual data environments, model kinds, audits, cron): see the [SQLMesh docs](https://sqlmesh.readthedocs.io/en/stable/).
 - dlt MotherDuck destination setup (the `.dlt/secrets.toml` database and token): the [dlt MotherDuck destination guide](https://dlthub.com/docs/dlt-ecosystem/destinations/motherduck#setup-guide).
 - Deeper MotherDuck or DuckDB SQL questions: run the `ask_docs_question` MCP tool or check the [MotherDuck docs](https://motherduck.com/docs/).
