@@ -66,7 +66,7 @@ def main() -> None:
     # write so a failing webhook still leaves an audit trail.
     threshold = STATUS_RANK[alert_level]
     firing = [r for r in results if STATUS_RANK[r["status"]] >= threshold]
-    webhook = os.environ.get("SLACK_WEBHOOK_URL", "").strip()
+    webhook = resolve_webhook()
 
     if not firing:
         print(f"All checks within thresholds (alert level '{alert_level}'); no alert sent.")
@@ -74,12 +74,29 @@ def main() -> None:
     if not webhook:
         print(
             f"{len(firing)} check(s) at/above '{alert_level}', "
-            "but SLACK_WEBHOOK_URL is not set; skipping Slack."
+            "but no SLACK_WEBHOOK_URL was found in the environment; skipping Slack."
         )
         return
 
     send_slack_alert(webhook, firing)
     print(f"Sent Slack alert for {len(firing)} check(s).")
+
+
+def resolve_webhook() -> str:
+    # A local run sets SLACK_WEBHOOK_URL directly (see "Run it"). Deployed as a
+    # Flight, the webhook comes from a `TYPE flights` secret, and MotherDuck
+    # injects each secret param under the env var `<secret_name>_<PARAM>`, NOT
+    # the bare param name. So a secret named `freshness_slack` with a
+    # `SLACK_WEBHOOK_URL` param arrives as `freshness_slack_SLACK_WEBHOOK_URL`.
+    # Accept both: the exact name first (local), then any var ending in the
+    # suffix (the secret, whatever you named it).
+    direct = os.environ.get("SLACK_WEBHOOK_URL", "").strip()
+    if direct:
+        return direct
+    for key, value in os.environ.items():
+        if key.endswith("_SLACK_WEBHOOK_URL") and value.strip():
+            return value.strip()
+    return ""
 
 
 def evaluate(con: duckdb.DuckDBPyConnection, check: dict) -> dict:

@@ -40,7 +40,7 @@ and the MotherDuck token come from outside the code.
 | `warn_after_hours` / `error_after_hours` | `CHECKS` entry | `24` / `48` | Age thresholds in hours. `lag >= error` → `error`, `>= warn` → `warn`, else `pass`. |
 | `ALERT_LEVEL` | top of `flight.py` | `warn` | `warn` alerts on warn+error; `error` alerts only on error. |
 | `RESULTS_TABLE` | top of `flight.py` | `flights_demo.main.freshness_check_runs` | Audit ledger target as `database.schema.table`. Must be a writable database. `""` disables the ledger. |
-| `SLACK_WEBHOOK_URL` | Flight secret / env var | (unset) | Slack Incoming Webhook URL. Provide it through a MotherDuck secret, never in code. Unset → the run prints the report and skips Slack. |
+| `SLACK_WEBHOOK_URL` | Flight secret / env var | (unset) | Slack Incoming Webhook URL. Provide it through a MotherDuck secret, never in code. As a Flight the secret arrives as `<secret_name>_SLACK_WEBHOOK_URL`; `flight.py` resolves either name. Unset → the run prints the report and skips Slack. |
 | `MOTHERDUCK_TOKEN` | Flight-injected | (Flight-injected) | Auth. Select a token on the Flight; never hard-code it. |
 
 ## Questions to answer
@@ -116,6 +116,13 @@ CREATE SECRET freshness_slack IN motherduck (
 );
 ```
 
+A `TYPE flights` secret injects each param under the env var
+`<secret_name>_<PARAM>`, not the bare param name: the param above arrives as
+`freshness_slack_SLACK_WEBHOOK_URL`, not `SLACK_WEBHOOK_URL`. (DuckDB lowercases
+the unquoted secret name into the prefix.) `flight.py` handles this: it reads
+`SLACK_WEBHOOK_URL` for local runs and otherwise picks up any env var ending in
+`_SLACK_WEBHOOK_URL`, so the secret name you choose does not matter.
+
 Then deploy with the MotherDuck MCP server rather than checked-in SQL. Call
 `get_flight_guide` first for the exact tool arguments, then `create_flight` with:
 
@@ -124,7 +131,8 @@ Then deploy with the MotherDuck MCP server rather than checked-in SQL. Call
 - `access_token_name`: a service account token that can read the checked tables
   and write `RESULTS_TABLE` (list tokens with the `md_access_tokens()` table
   function); the runtime injects its value as `MOTHERDUCK_TOKEN`
-- `flight_secret_names`: `["freshness_slack"]` so `SLACK_WEBHOOK_URL` is injected
+- `flight_secret_names`: `["freshness_slack"]` so the webhook is injected (as
+  `freshness_slack_SLACK_WEBHOOK_URL`; `flight.py` resolves it)
 
 No `config` is needed: every knob lives in the code.
 
