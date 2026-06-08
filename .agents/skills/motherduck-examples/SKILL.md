@@ -11,7 +11,7 @@ Flight Plans, catalog generation, catalog validation, or starter download flow.
 ## Repository Model
 
 This repo is becoming a flat, agent-readable catalog of MotherDuck examples.
-Each catalog entry is a folder with working code and a README that serves both
+Each catalog entry is an independent folder with working code and a README that serves both
 humans and agents.
 
 There are two entry families:
