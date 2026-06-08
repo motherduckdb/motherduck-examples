@@ -29,11 +29,13 @@ BRANCH="${BRANCH:-main}"
 
 # Top-level folders that are not starter projects and should be hidden
 # from the list. Everything else in the repo root is treated as a starter.
+# Flight Plans live one level down under flight-plans/ and are added separately.
 EXCLUDED_DIRS=(
   "scripts"
   "landing"
   "datasets"
   "theming"
+  "flight-plans"
   ".devcontainer"
   ".github"
 )
@@ -67,6 +69,21 @@ fetch_starters() {
     done
     [ "${excluded}" = "false" ] && AVAILABLE_STARTERS+=("${dir}")
   done <<< "${dirs}"
+
+  # Flight Plans live under flight-plans/. Add their short names too, so a user
+  # can ask for "dbt-ingestion-s3" and get flight-plans/dbt-ingestion-s3.
+  local fp_raw fp_dirs fp_dir
+  fp_raw=$(curl -fsSL "https://api.github.com/repos/${REPO}/contents/flight-plans?ref=${BRANCH}" 2>/dev/null) || fp_raw=""
+  if [ -n "${fp_raw}" ]; then
+    fp_dirs=$(echo "${fp_raw}" | awk -F'"' '
+      /"name":/ { name = $4 }
+      /"type":/ { if ($4 == "dir" && name != "") { print name; name = "" } }
+    ')
+    while IFS= read -r fp_dir; do
+      [ -z "${fp_dir}" ] && continue
+      AVAILABLE_STARTERS+=("${fp_dir}")
+    done <<< "${fp_dirs}"
+  fi
 
   [ ${#AVAILABLE_STARTERS[@]} -gt 0 ]
 }
@@ -155,13 +172,20 @@ git clone --depth 1 --filter=blob:none --sparse -b "${BRANCH}" "${REPO_URL}" "${
 }
 
 cd "${STARTER_NAME}.tmp"
-# Configure sparse checkout to only get the starter folder
-git sparse-checkout set "${STARTER_NAME}"
+# Configure sparse checkout to only get the starter folder. The starter may be a
+# top-level folder or a Flight Plan under flight-plans/, so fetch both candidates.
+git sparse-checkout set "${STARTER_NAME}" "flight-plans/${STARTER_NAME}"
 # Checkout the files (sparse checkout doesn't auto-checkout)
 git checkout "${BRANCH}" 2>/dev/null || git checkout HEAD
 
+# Resolve where the starter actually lives: top level, or under flight-plans/.
+STARTER_PATH="${STARTER_NAME}"
+if [ ! -d "${STARTER_PATH}" ] && [ -d "flight-plans/${STARTER_NAME}" ]; then
+  STARTER_PATH="flight-plans/${STARTER_NAME}"
+fi
+
 # Check if the starter directory exists after sparse checkout
-if [ ! -d "$STARTER_NAME" ]; then
+if [ ! -d "${STARTER_PATH}" ]; then
   echo -e "${RED}Error: Starter project directory '${STARTER_NAME}' not found in repository.${NC}"
   echo "Available directories:"
   ls -la
@@ -173,12 +197,11 @@ fi
 # Create final directory in parent
 mkdir -p "../${STARTER_NAME}"
 
-# Move all contents (including hidden files) from starter folder to final location
-if [ -d "$STARTER_NAME" ]; then
-  # Use find to handle all files including hidden ones
-  find "${STARTER_NAME}" -mindepth 1 -maxdepth 1 -exec mv {} "../${STARTER_NAME}/" \;
-  rmdir "$STARTER_NAME" 2>/dev/null || true
-fi
+# Move all contents (including hidden files) from the starter folder to the final
+# location, always landing in a top-level folder named after the short name.
+find "${STARTER_PATH}" -mindepth 1 -maxdepth 1 -exec mv {} "../${STARTER_NAME}/" \;
+rmdir "${STARTER_PATH}" 2>/dev/null || true
+rmdir "flight-plans" 2>/dev/null || true
 
 # Remove git history
 rm -rf .git
