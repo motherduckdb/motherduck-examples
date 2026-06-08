@@ -70,6 +70,8 @@ ALLOWED_TAGS = {
     "durable-objects",
     "docker",
     "grafana",
+    # messaging and alerting
+    "slack",
     # external databases
     "postgres",
     "sqlite",
