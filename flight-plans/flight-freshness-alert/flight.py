@@ -174,8 +174,9 @@ def send_slack_alert(webhook: str, firing: list[dict]) -> None:
             detail = r["detail"] or "no data"
         else:
             detail = (
-                f"{r['lag_hours']:.0f}h old "
-                f"(warn after {r['warn_after_hours']:.0f}h, error after {r['error_after_hours']:.0f}h)"
+                f"{humanize_hours(r['lag_hours'])} old "
+                f"(warn after {humanize_hours(r['warn_after_hours'])}, "
+                f"error after {humanize_hours(r['error_after_hours'])})"
             )
         lines.append(f"{emoji} *{r['table']}* — {r['status'].upper()}: {detail}")
 
@@ -201,10 +202,41 @@ def format_line(r: dict) -> str:
         return f"[{r['status'].upper():5}] {r['table']} ({r['column']}): {r['detail']}"
     return (
         f"[{r['status'].upper():5}] {r['table']} ({r['column']}): "
-        f"{r['lag_hours']:.0f}h old "
-        f"(warn>{r['warn_after_hours']:.0f}h, error>{r['error_after_hours']:.0f}h); "
+        f"{humanize_hours(r['lag_hours'])} old "
+        f"(warn after {humanize_hours(r['warn_after_hours'])}, "
+        f"error after {humanize_hours(r['error_after_hours'])}); "
         f"max {r['max_ts']}"
     )
+
+
+def humanize_hours(hours: float) -> str:
+    # Turn an age in hours into the largest natural unit (hours, days, months,
+    # years), so an alert reads "3 years, 7 months" instead of "31203h". The
+    # ledger still stores the exact numeric lag_hours; this is display only.
+    h = float(hours)
+    if h < 1:
+        return "under 1 hour"
+    if round(h) < 24:
+        return _plural(round(h), "hour")
+    days = h / 24
+    if round(days) < 60:
+        return _plural(round(days), "day")
+    months = days / 30.44  # average days per month
+    if round(months) < 12:
+        return _plural(round(months), "month")
+    years = days / 365.25
+    whole_years = int(years)
+    extra_months = round((years - whole_years) * 12)
+    if extra_months >= 12:  # rounding can push remainder to a full year
+        whole_years += 1
+        extra_months -= 12
+    if extra_months:
+        return f"{_plural(whole_years, 'year')}, {_plural(extra_months, 'month')}"
+    return _plural(whole_years, "year")
+
+
+def _plural(n: int, unit: str) -> str:
+    return f"{n} {unit}" if n == 1 else f"{n} {unit}s"
 
 
 def validate_identifier(name: str, value: str) -> str:
