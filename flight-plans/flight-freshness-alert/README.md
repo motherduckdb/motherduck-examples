@@ -56,7 +56,8 @@ and the MotherDuck token come from outside the code.
 
 You need a MotherDuck account and an access token. With the defaults, the check
 reads two public `sample_data` tables (no extra credentials needed). Provide
-`SLACK_WEBHOOK_URL` only if you want a real Slack post during the smoke test.
+`SLACK_WEBHOOK_URL` only if you want a real Slack post during the smoke test (see
+[Create the Slack webhook](#create-the-slack-webhook) below to get one).
 
 ```bash
 export MOTHERDUCK_TOKEN=your_token_here
@@ -70,10 +71,43 @@ With the defaults this checks the two frozen `sample_data` tables, prints two
 (if `SLACK_WEBHOOK_URL` is set) posts one Slack alert. That confirms the whole
 path before you point `CHECKS` at your own tables.
 
+### Create the Slack webhook
+
+Skip this if you only want the printed report. To post to Slack, create one
+Incoming Webhook and reuse its URL (see the
+[Slack incoming webhooks docs](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/)):
+
+1. Open [api.slack.com/apps?new_app=1](https://api.slack.com/apps?new_app=1) and choose **From a manifest**.
+2. Select your workspace.
+3. Paste this manifest (it only sets the app name; rename it if you like), then review and create the app:
+   ```json
+   {
+       "display_information": {
+           "name": "Fresh Ducks"
+       },
+       "settings": {
+           "org_deploy_enabled": false,
+           "socket_mode_enabled": false,
+           "is_hosted": false,
+           "token_rotation_enabled": false
+       }
+   }
+   ```
+4. Open **Incoming Webhooks** in the app settings (`https://api.slack.com/apps/<APP_ID>/incoming-webhooks`),
+   toggle **Activate Incoming Webhooks** on, click **Add New Webhook to Workspace**, pick the
+   destination channel, and **Authorize**.
+5. Copy the generated webhook URL (it looks like `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXX`)
+   and use it as `SLACK_WEBHOOK_URL`: an env var for a local run, or the secret below for a Flight.
+
+The webhook URL is a secret and is tied to the one channel you picked. Keep it out
+of code and version control (store it as a MotherDuck secret for a Flight); Slack
+revokes webhook URLs that leak.
+
 ### Deploy as a Flight
 
-First create the Slack webhook as a MotherDuck secret (best in the MotherDuck
-console; also works via the `query_rw` MCP tool or a direct SQL connection):
+Store the webhook URL from [Create the Slack webhook](#create-the-slack-webhook) as
+a MotherDuck secret (best in the MotherDuck console; also works via the `query_rw`
+MCP tool or a direct SQL connection):
 
 ```sql
 CREATE SECRET freshness_slack IN motherduck (
