@@ -1,28 +1,38 @@
 ---
-title: Track Most-Used Tables Across Dives
+title: Map Data Usage and Relationships Across Dives
 id: flight-dive-usage-metrics
 description: >-
   A config-driven Flight that scans the shared Dives in your MotherDuck
-  organization, parses the SQL embedded in each Dive, and refreshes a metrics
-  table of the most-referenced tables, databases, schemas, and columns. Use when
-  you want a scheduled, trend-aware view of which data objects your Dives lean on
-  most.
+  organization, parses the SQL embedded in each Dive, and refreshes tables of the
+  most-referenced data objects plus the relationships between them: per-Dive
+  dependency edges, table co-occurrence, and join keys mined from the SQL. Use when
+  you want a scheduled, trend-aware map of which data objects your Dives lean on
+  and how they connect.
 type: template
 features: [flights, dives]
 tags: []
 ---
 
-# Track Most-Used Tables Across Dives
+# Map Data Usage and Relationships Across Dives
 
-A single-file Flight that turns the SQL inside your organization's Dives into a
-metrics table. Each run enumerates the Dives, extracts the SQL each one embeds,
-parses that SQL with DuckDB's own parser, and counts which tables, databases,
-schemas, and columns get referenced. It writes one timestamped batch of rows per
-run, so you can watch which data objects your Dives depend on and how that shifts
-over time.
+A single-file Flight that turns the SQL inside your organization's Dives into
+queryable metadata. Each run enumerates the Dives, extracts the SQL each one
+embeds, parses that SQL with DuckDB's own parser, and records both what the Dives
+reference and how those objects relate. It writes one timestamped batch per run,
+so you can watch how your Dives' data footprint shifts over time.
 
-This answers questions like "which tables are most central to our Dives", "which
-databases would be risky to rename", and "what columns do our dashboards lean on".
+It produces four tables (each with a `_latest` view):
+
+- **Usage** (`dive_usage_metrics`): how many Dives reference each table, database,
+  schema, and column.
+- **Dependency edges** (`dive_object_edges`): one row per Dive-to-object
+  reference, for impact analysis ("which Dives break if this table changes?").
+- **Co-occurrence** (`dive_table_cooccurrence`): tables that appear together in the
+  same statement, a signal for de-facto data domains and candidate joins.
+- **Join keys** (`dive_join_edges`): column-to-column join keys mined from the SQL
+  (JOIN conditions and WHERE equalities), an ERD inferred from how Dives actually
+  query.
+
 It reads Dives read-only and writes only to the target database you configure.
 
 Everything is driven by Flight config, so you adapt it by setting config values,
@@ -37,7 +47,11 @@ Flight config, not by editing code.
 |---|---|---|
 | `TARGET_DATABASE` | `dive_metrics` | Database that holds the metrics table. Created if missing. Validated as a SQL identifier. |
 | `TARGET_SCHEMA` | `main` | Schema for the metrics table. Created if missing. Validated as a SQL identifier. |
-| `METRICS_TABLE` | `dive_usage_metrics` | Metrics table name. A companion `<table>_latest` view exposes the newest run. Validated as a SQL identifier. |
+| `METRICS_TABLE` | `dive_usage_metrics` | Usage metrics table name. A companion `<table>_latest` view exposes the newest run. Validated as a SQL identifier. |
+| `BUILD_RELATIONSHIPS` | `true` | Also build the dependency, co-occurrence, and join-key tables. Set false to produce only the usage metrics. |
+| `EDGES_TABLE` | `dive_object_edges` | Dependency-edge table (one row per Dive-to-object reference). Validated as a SQL identifier. |
+| `COOCCURRENCE_TABLE` | `dive_table_cooccurrence` | Table co-occurrence table (table pairs sharing a statement). Validated as a SQL identifier. |
+| `JOIN_TABLE` | `dive_join_edges` | Mined join-key table (column-to-column edges). Validated as a SQL identifier. |
 | `INCLUDE_ORG_SHARES` | `true` | When true, scan every Dive shared in the organization via `MD_LIST_DIVES(include_org_shares := true)`. When false, scan only the token owner's own Dives. |
 | `DIVE_LIMIT` | (unset) | Optional cap on how many Dives to scan, useful for a quick first run. Unset or `0` means no limit. |
 | `MOTHERDUCK_TOKEN` | (Flight-injected) | Auth. Use a token that can read the Dives you want counted and write `TARGET_DATABASE`. Never put it in config. |
@@ -117,14 +131,43 @@ new Flight version.
    (`database.schema.table`); bare CTE and alias names that the parser also
    reports as `BASE_TABLE` are skipped, and SQL keywords surfaced as columns (for
    example `CURRENT_DATE`) are dropped from the column metric.
-6. Aggregate across all Dives: `dive_count` counts the distinct Dives referencing
+6. When `BUILD_RELATIONSHIPS` is on, also analyze each statement for
+   relationships: collect its fully-qualified tables (resolving CTE references and
+   table aliases to real tables), emit every co-occurring table pair, and mine join
+   keys from every `column = column` equality (JOIN conditions and WHERE clauses
+   alike), resolving each side's qualifier through the alias and CTE maps.
+7. Aggregate across all Dives: `dive_count` counts the distinct Dives referencing
    each object (an object referenced many times in one Dive counts once),
-   `reference_count` is the raw total of occurrences.
-7. Append one timestamped batch of rows to `METRICS_TABLE` and refresh the
-   `<table>_latest` view (its database and schema are created on first run).
+   `reference_count` is the raw total of occurrences. Co-occurrence and join edges
+   track both a distinct-Dive count and a per-statement `query_count`.
+8. Append one timestamped batch to each output table and refresh its
+   `<table>_latest` view (the database and schema are created on first run). Writes
+   use chunked bulk `INSERT`s so large edge tables stay on a fast path.
 
 A progress line is logged every 200 Dives (and on the last one), so a long
 org-wide scan reports `processed N/total` instead of going silent for minutes.
+
+## Using the relationship tables
+
+```sql
+-- Impact analysis: which Dives reference a given table?
+SELECT dive_title
+FROM dive_metrics.main.dive_object_edges_latest
+WHERE object_type = 'table' AND object_name = 'mdw.main.current_organizations'
+ORDER BY dive_title;
+
+-- Tables most often queried together:
+SELECT table_a, table_b, dive_count, query_count
+FROM dive_metrics.main.dive_table_cooccurrence_latest
+ORDER BY dive_count DESC, query_count DESC
+LIMIT 20;
+
+-- Inferred join keys (an ERD mined from real usage):
+SELECT left_table, left_column, right_table, right_column, dive_count
+FROM dive_metrics.main.dive_join_edges_latest
+ORDER BY dive_count DESC
+LIMIT 20;
+```
 
 ## Caveats
 
@@ -152,6 +195,18 @@ org-wide scan reports `processed N/total` instead of going silent for minutes.
   call if a MotherDuck build does not support the argument. `MD_GET_DIVE` requires
   the id as a named UUID argument (`MD_GET_DIVE(id => ?::UUID)`) and accepts only a
   literal, so it is called once per Dive id rather than in a lateral join.
+- **Co-occurrence is same-statement.** Two tables co-occur when they appear in the
+  same parsed statement, a strong signal that they are joined or unioned, not
+  merely that they sit in the same Dive. CTE references and aliases are resolved to
+  the real tables first.
+- **Join keys are mined heuristically.** Edges come from `column = column`
+  equalities in JOIN conditions and WHERE clauses, with aliases and CTE references
+  resolved to real tables. This captures real foreign-key-like relationships, but
+  can include the occasional non-join equality (for example a filter comparing two
+  columns) and misses joins expressed without an equality (ranges, function calls).
+  Treat the counts as evidence of how Dives relate tables, not as declared
+  constraints. Set `BUILD_RELATIONSHIPS=false` to skip the three relationship
+  tables entirely.
 - **Metrics reflect Dive source SQL, not executed query frequency.** A table that
   appears in many Dives ranks high even if those Dives are rarely opened. For how
   often queries actually run, see `MD_INFORMATION_SCHEMA.QUERY_HISTORY`, but note
@@ -164,14 +219,14 @@ org-wide scan reports `processed N/total` instead of going silent for minutes.
   `TARGET_SCHEMA`, `METRICS_TABLE`) are checked against `^[A-Za-z_][A-Za-z0-9_]*$`
   before any SQL runs, because they flow into `CREATE`/`INSERT` statements that
   cannot be parameterized.
-- **Parameterized writes.** Every data value (object name, counts) and the Dive id
-  passed to `MD_GET_DIVE`, and each candidate SQL string passed to
+- **Parameterized writes.** Every data value (object names, edge endpoints, counts)
+  and the Dive id passed to `MD_GET_DIVE`, and each candidate SQL string passed to
   `json_serialize_sql`, are bound as parameters, never string-formatted into SQL.
-  Metric rows are written in one bulk multi-row `INSERT`.
+  Rows are written in chunked bulk multi-row `INSERT`s.
 - **Read-only against Dives.** The Flight only reads Dives (`MD_LIST_DIVES`,
-  `MD_GET_DIVE`) and writes solely to `TARGET_DATABASE`. Scope the token
-  accordingly: read access to the Dives you want counted, write access to the
-  target database.
+  `MD_GET_DIVE`) and writes solely to `TARGET_DATABASE` (the usage, dependency,
+  co-occurrence, and join-key tables). Scope the token accordingly: read access to
+  the Dives you want counted, write access to the target database.
 
 ## Learn more
 
