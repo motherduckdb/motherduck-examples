@@ -1,0 +1,103 @@
+---
+title: NBA Box Scores on MotherDuck Flights and a Dive
+id: nba-box-scores
+description: >-
+  An end-to-end NBA stack on MotherDuck: a Python ingest pipeline that runs as
+  scheduled Flights into the nba_box_scores_v3 database, plus a Dive frontend
+  (schedule, box scores, a Game Quality leaderboard, and trends) that reads it
+  live. Use when you want a worked example of pairing a scheduled Flight ingest
+  with a Dive built and deployed as code.
+type: example
+features: [flights, dives]
+tags: [python, typescript]
+---
+
+# NBA Box Scores on MotherDuck Flights and a Dive
+
+NBA box scores on a MotherDuck-native stack — a migration of the legacy
+TypeScript/GitHub-Actions ingest + Next.js/Vercel frontend at
+[`matsonj/nba-box-scores`](https://github.com/matsonj/nba-box-scores) onto
+MotherDuck **Flights** + a **Dive**. It shows the pattern of keeping a database
+current with a scheduled Flight and shipping a Dive on top that queries it live.
+Everything reads/writes the `nba_box_scores_v3` database.
+
+Two decoupled slices:
+
+| Slice | What it is |
+|---|---|
+| [`flight/`](./flight/) | Python ingest pipeline, run as scheduled MotherDuck **Flights**. `nba_nightly` ingests the current season into the production tables; `nba_backfill` is on-demand for historical season ranges. |
+| [`dive/`](./dive/) | The consolidated frontend, built as a MotherDuck **Dive** — schedule + box scores, a Game Quality leaderboard, and trends. Reads what `flight/` writes. |
+
+The Flight keeps `nba_box_scores_v3` current; the Dive queries it live. Each
+slice's README covers its own deeper development and deploy details.
+
+## What you'll adjust
+
+| Knob | Where | Purpose |
+|---|---|---|
+| `database` | `flight/src/nba_box_scores_pipeline/config.py` | Target MotherDuck database. Default `nba_box_scores_v3`. |
+| `NBA_INGEST_SEASON` | env (nightly) | Season-start year to ingest (e.g. `2025` for 2025-26). Defaults to the current season. |
+| `NBA_INGEST_TABLE_SUFFIX` | env | Write an isolated sandbox table set (e.g. `_new`) for validation. Default `""` = production tables. |
+| `NBA_BACKFILL_START_SEASON` / `NBA_BACKFILL_END_SEASON` | env (backfill) | Inclusive historical season range for `nba_backfill`. |
+| `NBA_INGEST_DELAY_MS` / `NBA_INGEST_MIN_DELAY_MS` / `NBA_INGEST_MAX_DELAY_MS` | env | Adaptive API request pacing. Defaults `500` / `200` / `10000`. |
+| `NBA_INGEST_FORCE` / `NBA_INGEST_FILL_RAW` / `NBA_INGEST_DRY_RUN` | env | Re-ingest logged games / fetch only missing raw JSON / log without writing. Set `1` to enable. |
+| `NBA_FLIGHT_REPO_BRANCH` | env | Branch the Flight bootstrapper clones at run time. Default `main`. |
+| `md_token_name` | `flight/flights/*/flight.toml` | MotherDuck token the Flight runtime injects as `MOTHERDUCK_TOKEN`. Default `dives-loader-nba`. |
+| `schedule_cron` | `flight/flights/nba_nightly/flight.toml` | Nightly schedule. Default `0 16 * * *` (16:00 UTC). |
+| Dive `id` | `dive/README.md` deploy SQL | The Dive to create or update with `MD_CREATE_DIVE` / `MD_UPDATE_DIVE_CONTENT`. |
+
+## Questions to answer
+
+- Which MotherDuck database holds the box-score tables? (Default `nba_box_scores_v3`.)
+- Which seasons do you need — the current season on a nightly schedule, a historical range to backfill, or both?
+- Which MotherDuck token name does the Flight inject, and does it have read+write on that database? (Default `dives-loader-nba`.)
+- Production tables, or an isolated `_new` suffix to validate a run before promoting?
+- Which Dive `id` do you create or update, and are you deploying with a DuckDB **1.5.2** client (MotherDuck rejects 1.5.3)?
+
+## Run it
+
+The two slices are independent. Develop the ingest pipeline and the Dive
+separately; see [`flight/README.md`](./flight/README.md) and
+[`dive/README.md`](./dive/README.md) for the full walkthroughs.
+
+Ingest pipeline (local):
+
+```bash
+cd nba-box-scores/flight
+uv venv
+uv pip install -e ".[dev]"
+
+export MOTHERDUCK_TOKEN=<token with nba_box_scores_v3 read+write>
+python flights/nba_nightly/main.py
+```
+
+Dive (build the deployable bundle):
+
+```bash
+cd nba-box-scores/dive
+npm install      # esbuild
+npm run build    # → dist/dive.jsx
+```
+
+### Deploy as a Flight
+
+Each Flight's registered `source_code` is the thin bootstrapper in
+`flight/flights/<name>/main.py`: it clones this repo at `NBA_FLIGHT_REPO_BRANCH`
+(default `main`), `uv sync`s the package, and runs the entrypoint from the
+synced venv. Pushing to the branch updates what the next run executes — no
+re-registration needed. Register or update each Flight with the MotherDuck MCP
+`create_flight` / `update_flight` tools, pointing `md_token_name` at
+`dives-loader-nba`. `nba_nightly` carries `schedule_cron = "0 16 * * *"`;
+`nba_backfill` has no schedule and is triggered on demand with `run_flight`.
+See [`flight/README.md`](./flight/README.md) for details.
+
+To deploy the Dive, build the bundle and update the Dive content from disk with
+`MD_UPDATE_DIVE_CONTENT` (or `MD_CREATE_DIVE` on first creation), or use the MCP
+`save_dive` / `update_dive` tools — see [`dive/README.md`](./dive/README.md) for
+the exact SQL and the `required_resources` argument.
+
+## How it works / Learn more
+
+- [`flight/README.md`](./flight/README.md) — pipeline layout, local development, and Flight registration.
+- [`dive/README.md`](./dive/README.md) — the three-tab Dive, the esbuild bundle, deploy SQL, and data-modeling notes (stable `entity_id` aggregation, the `game_quality = -1` sub-15-minute sentinel, and Dive-renderer styling caveats).
+- For Flight and Dive deployment mechanics, see the MotherDuck MCP guides (`get_flight_guide`, `get_dive_guide`) and `ask_docs_question`.
