@@ -4,6 +4,8 @@ The consolidated NBA Box Scores **Dive** that replaces the legacy Next.js/Vercel
 frontend. Reads `nba_box_scores_v3` directly via `useSQLQuery`. The companion
 ingest pipeline lives in [`../flight`](../flight).
 
+![NBA Box Scores Dive — schedule with an open box-score panel](assets/nba-box-scores-dive.png)
+
 Three tabs, sharing one season/type/team/player filter bar:
 - **Schedule** — games grouped by date → click-through box-score modal → per-player game log.
 - **Game Quality** — player Game Quality leaderboard (drillable to game log).

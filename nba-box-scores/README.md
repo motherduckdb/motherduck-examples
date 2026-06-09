@@ -21,6 +21,8 @@ MotherDuck **Flights** + a **Dive**. It shows the pattern of keeping a database
 current with a scheduled Flight and shipping a Dive on top that queries it live.
 Everything reads/writes the `nba_box_scores_v3` database.
 
+![NBA Box Scores Dive — schedule with an open box-score panel](dive/assets/nba-box-scores-dive.png)
+
 Two decoupled slices:
 
 | Slice | What it is |
