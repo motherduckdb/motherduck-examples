@@ -44,7 +44,7 @@ slice's README covers its own deeper development and deploy details.
 | `NBA_FLIGHT_REPO_BRANCH` | env | Branch the Flight bootstrapper clones at run time. Default `main`. |
 | `md_token_name` | `flight/flights/*/flight.toml` | MotherDuck token the Flight runtime injects as `MOTHERDUCK_TOKEN`. Default `dives-loader-nba`. |
 | `schedule_cron` | `flight/flights/nba_nightly/flight.toml` | Nightly schedule. Default `0 16 * * *` (16:00 UTC). |
-| Dive `id` | `dive/README.md` deploy SQL | The Dive to create or update with `MD_CREATE_DIVE` / `MD_UPDATE_DIVE_CONTENT`. |
+| `DIVE_TITLE` / `NBA_DIVE_DATABASE` | env (`dive/scripts/deploy-dive.sh`) | Dive title to create/update (default `NBA Box Scores`) and the source database bound to its `nba_box_scores_v3` alias. |
 
 ## Questions to answer
 
@@ -52,7 +52,7 @@ slice's README covers its own deeper development and deploy details.
 - Which seasons do you need — the current season on a nightly schedule, a historical range to backfill, or both?
 - Which MotherDuck token name does the Flight inject, and does it have read+write on that database? (Default `dives-loader-nba`.)
 - Production tables, or an isolated `_new` suffix to validate a run before promoting?
-- Which Dive `id` do you create or update, and are you deploying with a DuckDB **1.5.2** client (MotherDuck rejects 1.5.3)?
+- What Dive title do you deploy under (the script resolves it by title), and are you deploying with a DuckDB **1.5.2** client (MotherDuck rejects 1.5.3)?
 
 ## Run it
 
@@ -91,10 +91,11 @@ re-registration needed. Register or update each Flight with the MotherDuck MCP
 `nba_backfill` has no schedule and is triggered on demand with `run_flight`.
 See [`flight/README.md`](./flight/README.md) for details.
 
-To deploy the Dive, build the bundle and update the Dive content from disk with
-`MD_UPDATE_DIVE_CONTENT` (or `MD_CREATE_DIVE` on first creation), or use the MCP
-`save_dive` / `update_dive` tools — see [`dive/README.md`](./dive/README.md) for
-the exact SQL and the `required_resources` argument.
+To deploy the Dive, run [`dive/scripts/deploy-dive.sh`](./dive/scripts/deploy-dive.sh):
+it builds the bundle and resolves the Dive by title via `MD_LIST_DIVES()`,
+creating it the first time and updating its content after — no Dive id is pinned
+in the repo. See [`dive/README.md`](./dive/README.md) for the title/database
+overrides and the underlying SQL.
 
 ## How it works / Learn more
 

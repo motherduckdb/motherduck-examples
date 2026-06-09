@@ -37,22 +37,34 @@ libraries external (`react`, `react-dom`, `recharts`, `d3`, `lucide-react`,
 
 ## Deploy
 
-The dive is owned by `matson` on prod
-(id `d474d326-4b1d-4caa-844f-f6eb1bdc52e9`). Deploy/update the content via the
-MotherDuck SQL functions, reading the bundle from disk — e.g. with the DuckDB
-CLI (use a **1.5.2** client; MotherDuck rejects 1.5.3):
+One command builds the bundle and deploys it:
+
+```bash
+export MOTHERDUCK_TOKEN=<token with nba_box_scores_v3 read+write>
+./scripts/deploy-dive.sh
+```
+
+[`scripts/deploy-dive.sh`](./scripts/deploy-dive.sh) resolves the Dive by
+**title** (default `NBA Box Scores`) via `MD_LIST_DIVES()` — it creates the Dive
+the first time and updates its content on every run after, so no Dive id is
+pinned in the repo. Override `DIVE_TITLE` to deploy a preview, or
+`NBA_DIVE_DATABASE` to bind the dive's `nba_box_scores_v3` alias to a
+differently-named source database. The script uses the DuckDB CLI, so use a
+**1.5.2** client (MotherDuck rejects 1.5.3).
+
+Under the hood it reads the bundle from disk and calls the MotherDuck SQL
+functions — `MD_CREATE_DIVE` (first run) / `MD_UPDATE_DIVE_CONTENT` (updates):
 
 ```sql
 SET VARIABLE c = (SELECT content FROM read_text('dist/dive.jsx'));
 FROM MD_UPDATE_DIVE_CONTENT(
-  id := 'd474d326-4b1d-4caa-844f-f6eb1bdc52e9'::UUID,
+  id := '<dive-id-from-MD_LIST_DIVES>'::UUID,
   content := getvariable('c'),
   required_resources := [{'url': 'md:nba_box_scores_v3', 'alias': 'nba_box_scores_v3'}],
   api_version := 1
 );
 ```
 
-(First-time creation uses `MD_CREATE_DIVE` with the same args plus `title`.)
 The MCP `save_dive` / `update_dive` tools also work but require pasting the full
 content as a parameter.
 
