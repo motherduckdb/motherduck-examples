@@ -8,7 +8,7 @@ description: >-
   incremental warehouse refresh without re-reading every partition each run.
 type: template
 features: [flights]
-tags: []
+tags: [ingest, s3]
 ---
 
 # Ingest Partitioned S3 Parquet on a Schedule
@@ -121,8 +121,12 @@ partition column so the incremental replace still lines up.
   as an integer so it matches a numeric Hive column. Pass a non-numeric value for
   string partitions (for example a region code).
 - **Private buckets need a secret.** The default dataset is public. Point
-  `SOURCE_GLOB` at a private bucket only after creating a MotherDuck S3 `SECRET`
-  available to the Flight's token.
+  `SOURCE_GLOB` at a private bucket only after adding a MotherDuck **S3 secret**
+  for it: the simplest way is the MotherDuck UI at
+  [Settings > Secrets](https://app.motherduck.com/settings/secrets), or
+  `CREATE SECRET ... (TYPE S3, ...)` from the DuckDB client. It must be available
+  to the Flight's token. (This is an S3 secret on the account, not a Flights
+  secret: it is read by the engine, not injected as an env var.)
 - **Keep the token out of config.** Select a token on the Flight so
   `MOTHERDUCK_TOKEN` is injected at runtime; do not place it in `config`.
 
