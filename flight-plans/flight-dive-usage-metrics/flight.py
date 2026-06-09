@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import re
@@ -150,7 +151,10 @@ def main() -> None:
 
     # One timestamp for the whole run so every row in this batch shares a run_at,
     # which keeps the history-append model and the `_latest` views consistent.
-    run_at = con.execute("SELECT now()").fetchone()[0]
+    # Generated in Python (not SELECT now()) on purpose: reading a TIMESTAMPTZ back
+    # from DuckDB into Python requires pytz, which the flight's duckdb wheel does
+    # not bundle. Binding a Python datetime for the INSERT needs no such import.
+    run_at = datetime.datetime.now(datetime.timezone.utc)
 
     write_metrics(con, target_database, target_schema, metrics_fqn, metric_rows, run_at)
 
