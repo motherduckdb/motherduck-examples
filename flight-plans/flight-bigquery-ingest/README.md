@@ -9,7 +9,7 @@ description: >-
   BigQuery to MotherDuck ingestion as part of a migration off BigQuery.
 type: template
 features: [flights]
-tags: [bigquery]
+tags: [bigquery, ingest, migrate]
 ---
 
 # Incrementally Ingest a BigQuery Query into MotherDuck

@@ -1,21 +1,24 @@
 ---
-title: Migrate Snowflake Tables to MotherDuck From a Flight
-id: flight-snowflake-migrate
+title: Ingest Snowflake Tables into MotherDuck From a Flight
+id: flight-snowflake-ingest
 description: >-
-  A reusable Flight that migrates Snowflake tables to MotherDuck in two phases:
+  A reusable Flight that ingests Snowflake tables into MotherDuck in two phases:
   discover builds an editable inventory of source tables, and move copies the
-  selected ones via Arrow. Use when you want a code-driven, re-runnable
-  Snowflake-to-MotherDuck migration with a control table you can curate.
+  selected ones via Arrow. Use it for a code-driven, re-runnable Snowflake to
+  MotherDuck ingest with a control table you can curate, for example as part of
+  a migration off Snowflake.
 type: template
 features: [flights]
-tags: [snowflake]
+tags: [snowflake, ingest, migrate]
 ---
 
-# Migrate Snowflake Tables to MotherDuck From a Flight
+# Ingest Snowflake Tables into MotherDuck From a Flight
 
-A single-file Flight that implements the generic Snowflake-to-MotherDuck
-migration pattern in two phases. It is deliberately just the migration mechanics:
-no UI, no per-table Flights, just `discover` and `move`.
+A single-file Flight that ingests Snowflake tables into MotherDuck in two phases.
+It is the Snowflake side of a migration onto MotherDuck: keep Snowflake as the
+source of truth while you build out MotherDuck, and re-run the Flight to copy the
+tables you select. It is deliberately just the ingest mechanics: no UI, no
+per-table Flights, just `discover` and `move`.
 
 - **DISCOVER** connects to Snowflake, enumerates the tables in scope from
   `INFORMATION_SCHEMA.TABLES`, and writes that inventory to a MotherDuck control

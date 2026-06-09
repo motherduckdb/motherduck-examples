@@ -8,7 +8,7 @@ description: >-
   incremental warehouse refresh without re-reading every partition each run.
 type: template
 features: [flights]
-tags: []
+tags: [ingest, s3]
 ---
 
 # Ingest Partitioned S3 Parquet on a Schedule

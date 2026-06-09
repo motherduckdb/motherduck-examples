@@ -8,7 +8,7 @@ description: >-
   behavior without hand-writing every INSERT.
 type: template
 features: [flights]
-tags: [dlt]
+tags: [dlt, ingest]
 ---
 
 # Run a dlt Ingest Pipeline as a Flight

@@ -70,6 +70,7 @@ ALLOWED_TAGS = {
     "durable-objects",
     "docker",
     "grafana",
+    "s3",
     # messaging and alerting
     "slack",
     # external databases
@@ -77,6 +78,9 @@ ALLOWED_TAGS = {
     "sqlite",
     "snowflake",
     "bigquery",
+    # data movement patterns
+    "ingest",
+    "migrate",
 }
 ALLOWED_KEYS = {"title", "id", "description", "type", "features", "tags"}
 REQUIRED_KEYS = {"title", "id", "description", "type"}
