@@ -134,8 +134,11 @@ direct inserts are fine.
 - **`merge` needs a primary key.** With `WRITE_DISPOSITION=merge`, set `PRIMARY_KEY`
   to the column that identifies a row; otherwise use `append` or `replace`.
 - **Keep source credentials out of config.** Flight config is for non-secret
-  values. Read a private source's credentials from a MotherDuck secret or another
-  short-lived credential source.
+  values. Add a private source's credentials as a MotherDuck **Flights secret**
+  (the simplest way is the MotherDuck UI at
+  [Settings > Secrets](https://app.motherduck.com/settings/secrets), or
+  `CREATE SECRET ... (TYPE flights, ...)` from the DuckDB client), which the
+  runtime injects as env vars you read with `os.environ`.
 - **Keep the token out of config.** Select a token on the Flight so
   `MOTHERDUCK_TOKEN` is injected at runtime; do not place it in `config`.
 

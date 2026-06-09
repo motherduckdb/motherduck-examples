@@ -106,8 +106,12 @@ revokes webhook URLs that leak.
 ### Deploy as a Flight
 
 Store the webhook URL from [Create the Slack webhook](#create-the-slack-webhook) as
-a MotherDuck secret (best in the MotherDuck console; also works via the `query_rw`
-MCP tool or a direct SQL connection):
+a MotherDuck **Flights secret**. The simplest way is the MotherDuck UI: open
+[Settings > Secrets](https://app.motherduck.com/settings/secrets), add a secret of
+type **Flights**, and give it a `SLACK_WEBHOOK_URL` parameter. If you would rather
+use SQL, you can create the same secret from the DuckDB client or any SQL
+connection (the read-only `query` MCP tool rejects `CREATE SECRET`, so use
+`query_rw` or a direct connection):
 
 ```sql
 CREATE SECRET freshness_slack IN motherduck (

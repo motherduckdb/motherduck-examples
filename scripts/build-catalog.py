@@ -75,6 +75,8 @@ ALLOWED_TAGS = {
     # external databases
     "postgres",
     "sqlite",
+    "snowflake",
+    "bigquery",
 }
 ALLOWED_KEYS = {"title", "id", "description", "type", "features", "tags"}
 REQUIRED_KEYS = {"title", "id", "description", "type"}
