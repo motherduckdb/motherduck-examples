@@ -33,6 +33,19 @@ INTERPOLATION_PLACEHOLDER = "'__param__'"
 
 OBJECT_TYPES = ("database", "schema", "table", "column")
 
+# SQL date/time (and a few other) keywords that the parser represents as
+# COLUMN_REF nodes, e.g. CURRENT_DATE. They are not real columns, so they are
+# skipped when collecting column references. A denylist (rather than an all-caps
+# heuristic) avoids dropping legitimately upper-cased column names.
+KEYWORD_COLUMNS = {
+    "current_date", "current_time", "current_timestamp", "localtime",
+    "localtimestamp", "now", "current_user", "session_user", "user", "excluded",
+}
+
+# Emit a progress line every this many dives so a long org-wide scan is not
+# silent for minutes.
+HEARTBEAT_EVERY = 200
+
 
 def main() -> None:
     # Every knob is read from Flight config/env, so you adapt this template by
@@ -58,7 +71,8 @@ def main() -> None:
     parsed = 0
     skipped = 0
 
-    for dive_id, title in dives:
+    total = len(dives)
+    for i, (dive_id, title) in enumerate(dives, start=1):
         try:
             source = get_dive_source(con, dive_id)
         except duckdb.Error as exc:
@@ -86,6 +100,11 @@ def main() -> None:
         parsed += dive_parsed
         for key in dive_objects:
             dive_ids.setdefault(key, set()).add(dive_id)
+
+        # Heartbeat so a long org-wide scan reports progress instead of going
+        # silent for minutes; always print the final dive too.
+        if i % HEARTBEAT_EVERY == 0 or i == total:
+            print(f"processed {i}/{total} dive(s); {parsed} statement(s) parsed, {skipped} skipped so far")
 
     print(f"parsed {parsed} SQL statement(s); skipped {skipped} (unreadable / unparseable / not SQL)")
 
@@ -225,14 +244,19 @@ def objects_from_ast(ast: dict) -> set[tuple[str, str]]:
                     objects.add(("database", catalog))
                 if catalog and schema:
                     objects.add(("schema", f"{catalog}.{schema}"))
-                if table:
-                    parts = [p for p in (catalog, schema, table) if p]
-                    objects.add(("table", ".".join(parts)))
+                # Only count fully-qualified tables (database.schema.table). A
+                # bare or partially-qualified name is almost always a CTE or an
+                # alias, which the parser also reports as a BASE_TABLE, so it is
+                # skipped to keep the table metric clean.
+                if catalog and schema and table:
+                    objects.add(("table", f"{catalog}.{schema}.{table}"))
             if node_type == "COLUMN_REF" or node_class == "COLUMN_REF":
                 names = node.get("column_names")
                 if isinstance(names, list) and names:
                     column = str(names[-1]).strip()
-                    if column and column != "*":
+                    # Skip "*" and SQL keywords the parser surfaces as columns
+                    # (e.g. CURRENT_DATE) so the column metric reflects real columns.
+                    if column and column != "*" and column.lower() not in KEYWORD_COLUMNS:
                         objects.add(("column", column))
             for value in node.values():
                 walk(value)

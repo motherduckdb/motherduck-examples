@@ -113,18 +113,30 @@ new Flight version.
 5. Parse each candidate with `json_serialize_sql(?)` (the SQL is bound as a
    parameter), skip anything that does not parse, and walk the resulting JSON AST
    for `BASE_TABLE` nodes (database / schema / table) and `COLUMN_REF` nodes
-   (column names).
+   (column names). Tables are kept only when fully qualified
+   (`database.schema.table`); bare CTE and alias names that the parser also
+   reports as `BASE_TABLE` are skipped, and SQL keywords surfaced as columns (for
+   example `CURRENT_DATE`) are dropped from the column metric.
 6. Aggregate across all Dives: `dive_count` counts the distinct Dives referencing
    each object (an object referenced many times in one Dive counts once),
    `reference_count` is the raw total of occurrences.
 7. Append one timestamped batch of rows to `METRICS_TABLE` and refresh the
    `<table>_latest` view (its database and schema are created on first run).
 
+A progress line is logged every 200 Dives (and on the last one), so a long
+org-wide scan reports `processed N/total` instead of going silent for minutes.
+
 ## Caveats
 
+- **Tables are limited to fully-qualified names.** Only `database.schema.table`
+  references are counted. CTE and alias names (which the parser also reports as
+  `BASE_TABLE`) and partially-qualified references are skipped, so the table metric
+  reflects real tables rather than query-local names.
 - **Columns are attributed by name only.** The AST does not always resolve which
-  table a bare column belongs to, so columns are counted by name across all Dives.
-  A column named `id` in two unrelated tables is counted as one `id`.
+  table a bare column belongs to, so columns are counted by name across all Dives
+  (a column named `id` in two unrelated tables counts as one `id`), and SQL
+  keywords the parser surfaces as columns (for example `CURRENT_DATE`) are filtered
+  out with a small denylist.
 - **`SELECT *` is not expanded.** A `SELECT *` records the table reference but
   contributes no column rows, so column counts undercount wildcard-heavy Dives.
 - **Interpolated or unparseable queries are skipped.** A statement that still
