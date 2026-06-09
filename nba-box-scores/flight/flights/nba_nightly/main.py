@@ -5,9 +5,9 @@ thin and stable: it clones the motherduck-examples repo at a branch, `uv sync`s 
 pipeline package, and runs the real entrypoint from the synced venv.
 
 Because the code is fetched at run time, pushing to the branch updates
-what the next run executes — no flight re-registration needed. That's
-what lets us skip a deploy.py / CI step while the Flights SQL surface
-(MD_CREATE_FLIGHT etc.) is still rolling out.
+what the next run executes — no flight re-registration needed. Register
+this bootstrapper once with ../../scripts/deploy_flights.py; after that,
+shipping new pipeline code is just a git push.
 
 Env vars consumed here:
   NBA_FLIGHT_REPO_BRANCH   branch to clone (default: main)

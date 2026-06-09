@@ -81,15 +81,25 @@ npm run build    # → dist/dive.jsx
 
 ### Deploy as a Flight
 
-Each Flight's registered `source_code` is the thin bootstrapper in
-`flight/flights/<name>/main.py`: it clones this repo at `NBA_FLIGHT_REPO_BRANCH`
-(default `main`), `uv sync`s the package, and runs the entrypoint from the
-synced venv. Pushing to the branch updates what the next run executes — no
-re-registration needed. Register or update each Flight with the MotherDuck MCP
-`create_flight` / `update_flight` tools, pointing `md_token_name` at
-`dives-loader-nba`. `nba_nightly` carries `schedule_cron = "0 16 * * *"`;
-`nba_backfill` has no schedule and is triggered on demand with `run_flight`.
-See [`flight/README.md`](./flight/README.md) for details.
+One command registers (or updates) both Flights from their `flight.toml` +
+`main.py`:
+
+```bash
+export MOTHERDUCK_TOKEN=<token that can manage flights>
+cd nba-box-scores/flight
+uv run scripts/deploy_flights.py
+```
+
+[`flight/scripts/deploy_flights.py`](./flight/scripts/deploy_flights.py) calls
+`MD_CREATE_FLIGHT` / `MD_UPDATE_FLIGHT`, resolving each flight by name via
+`MD_FLIGHTS()`. The registered `source_code` is a thin bootstrapper that clones
+this repo at `NBA_FLIGHT_REPO_BRANCH` (default `main`) and runs the entrypoint —
+so you only deploy for the **first** registration (or when the bootstrapper,
+token, schedule, config, or requirements change); **shipping new pipeline code
+afterwards is just a `git push`**. `nba_nightly` carries
+`schedule_cron = "0 16 * * *"`; `nba_backfill` is on-demand (`run_flight`). The
+MCP `create_flight` / `update_flight` tools are the agent-driven equivalent. See
+[`flight/README.md`](./flight/README.md) for details.
 
 To deploy the Dive, run [`dive/scripts/deploy-dive.sh`](./dive/scripts/deploy-dive.sh):
 it builds the bundle and resolves the Dive by title via `MD_LIST_DIVES()`,

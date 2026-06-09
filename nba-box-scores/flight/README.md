@@ -37,10 +37,26 @@ to write an isolated sandbox table set for validation. In the Flight runtime,
 
 ## Deploy
 
-Each Flight's registered `source_code` is the thin bootstrapper in
-`flights/<name>/main.py`: it clones this repo at `NBA_FLIGHT_REPO_BRANCH`
-(default `main`), `uv sync`s the package, and runs the entrypoint from the
-synced venv. Pushing to the branch updates what the next run executes — no
-re-registration needed. Register/update via the MotherDuck MCP
-`create_flight` / `update_flight` tools, pointing `md_token_name` at
-`dives-loader-nba`.
+One command registers (or updates) both Flights:
+
+```bash
+export MOTHERDUCK_TOKEN=<token that can manage flights>
+uv run scripts/deploy_flights.py               # all flights
+uv run scripts/deploy_flights.py nba_nightly   # just one
+```
+
+[`scripts/deploy_flights.py`](./scripts/deploy_flights.py) reads each
+`flights/<name>/flight.toml` (name, `md_token_name`, `schedule_cron`, config,
+secrets) plus its `main.py`, then calls `MD_CREATE_FLIGHT` / `MD_UPDATE_FLIGHT`,
+resolving the flight by name via `MD_FLIGHTS()` — create the first time, update
+after. No flight id is pinned in the repo, and the pinned `duckdb` dependency is
+already a MotherDuck-compatible client.
+
+The registered `source_code` is the thin bootstrapper in `flights/<name>/main.py`:
+it clones this repo at `NBA_FLIGHT_REPO_BRANCH` (default `main`), `uv sync`s the
+package, and runs the entrypoint from the synced venv. So you only run the deploy
+command for the **first** registration (or when the bootstrapper, token,
+schedule, config, or requirements change) — **shipping new pipeline code
+afterwards is just a `git push`** to the branch the bootstrapper clones. The
+MotherDuck MCP `create_flight` / `update_flight` tools are the agent-driven
+equivalent if you'd rather not run the script.
