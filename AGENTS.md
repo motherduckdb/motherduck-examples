@@ -17,8 +17,12 @@ or the starter script.
 - All concrete examples live at the repo root, including flight-capable ones that
   carry `features: [flights]` and a "Deploy as a Flight" section. Do not move them
   under `flight-plans/` or a new `examples/` folder.
-- Flight templates are non-deterministic agent plans. Deployment guidance belongs
-  in README prose and MotherDuck MCP tool usage, not checked-in create-flight SQL.
+- Flight Plan templates (`flight-plans/`) are non-deterministic agent plans:
+  deploy them via README prose and the MotherDuck MCP Flight tools, not
+  checked-in create-flight SQL.
+- A concrete example that deploys as a Flight may ship a deploy script that calls
+  the Flight SQL surface (`MD_CREATE_FLIGHT` / `MD_UPDATE_FLIGHT`, resolving by
+  name via `MD_FLIGHTS()`) — the same shape as a Dive example's `deploy-dive.sh`.
 - README bodies should read like compact agent skills: what to adjust, questions
   to ask, how to run, and where to progressively disclose more detail.
 
