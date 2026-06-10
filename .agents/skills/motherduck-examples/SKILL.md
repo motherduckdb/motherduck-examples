@@ -22,10 +22,9 @@ There are two entry families:
   section, but they still live at the repo root.
 - `flight-plans/`: reusable, single-file Flight templates (`type: template`) that
   an agent adapts and deploys. This directory is purely for template-style Flight
-  files, not concrete examples. It currently holds `flight-scheduled-s3-ingest`
-  (scheduled, incremental partitioned S3 Parquet ingest), `flight-dlt-ingest`
-  (a dlt pipeline into MotherDuck), and `flight-provision-user-databases` (an
-  admin Flight that provisions per-user databases and shares).
+  files, not concrete examples. See the directory for the current set (S3, dlt,
+  Postgres, Snowflake, and BigQuery ingests, freshness alerts, user-database
+  provisioning, Dive usage metrics, ...).
 
 Keep all examples at the repo root, even flight-capable ones. Do not create an
 `examples/` wrapper folder, and do not move concrete examples into `flight-plans/`.
@@ -34,8 +33,16 @@ Keep all examples at the repo root, even flight-capable ones. Do not create an
 
 - README YAML front matter is the catalog metadata source of truth.
 - Flight Plans are non-deterministic plans an agent adapts after asking the user
-  a few questions; deploy them via the MotherDuck MCP Flight tools, not
-  checked-in create-flight SQL. (This rule is about `flight-plans/` templates.)
+  a few questions; their READMEs describe deployment through the Flight SQL
+  surface (`MD_CREATE_FLIGHT`, `MD_RUN_FLIGHT`, `MD_FLIGHTS()`), and no
+  create-flight SQL is checked in. (This rule is about `flight-plans/` templates.)
+- The Flight runtime attaches a MotherDuck token automatically and injects it as
+  `MOTHERDUCK_TOKEN` at run time. Do not document an `access_token_name`
+  argument in READMEs.
+- READMEs must work for humans and for agents on any client: name MCP tools
+  (`get_flight_guide`, `create_flight`, `query_rw`, ...) only in `## Caveats` or
+  `## Learn more`. In every other section reference the SQL surface
+  (`MD_CREATE_FLIGHT`, `MD_RUN_FLIGHT`, `CREATE SECRET`, ...) or the UI instead.
 - A concrete example that deploys as a Flight may ship a deploy script that
   calls the Flight SQL surface (`MD_CREATE_FLIGHT` / `MD_UPDATE_FLIGHT`,
   resolving by name via `MD_FLIGHTS()`), the same way a Dive example ships a
@@ -113,7 +120,9 @@ Use this structure:
    `### Deploy as a Flight` subsection under `## Run it`.
 6. `## How it works / Learn more`: link to extra files in the folder and point
    to MCP guides such as `get_flight_guide`, `get_dive_guide`, or
-   `ask_docs_question`.
+   `ask_docs_question`. This and `## Caveats` are the only places where MCP tool
+   names belong; every other section uses the SQL surface (`MD_CREATE_FLIGHT`,
+   `MD_RUN_FLIGHT`) or the UI so the README works on any client.
 
 This structure is a frame, not a cap. Add sections when the example has valuable
 content that does not fit, for example `## Caveats` for footguns, limitations,

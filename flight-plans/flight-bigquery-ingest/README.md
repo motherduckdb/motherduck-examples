@@ -98,9 +98,8 @@ secret**. The simplest way is the MotherDuck UI: open
 [Settings > Secrets](https://app.motherduck.com/settings/secrets), add a secret of
 type **Flights**, and give it a `GOOGLE_APPLICATION_CREDENTIALS_JSON` parameter
 whose value is the entire JSON key as one string. If you would rather use SQL, you
-can create the same secret from the DuckDB client or any SQL connection (the
-read-only `query` MCP tool rejects `CREATE SECRET`, so use `query_rw` or a direct
-connection):
+can create the same secret from the DuckDB client or any write-enabled SQL
+connection (read-only connections reject `CREATE SECRET`):
 
 ```sql
 CREATE SECRET gcp_creds IN motherduck (
@@ -119,26 +118,28 @@ env var ending in `_GOOGLE_APPLICATION_CREDENTIALS_JSON`, then writes the JSON t
 a temp file and points `GOOGLE_APPLICATION_CREDENTIALS` at it. The secret name you
 choose does not matter.
 
-Then deploy with the MotherDuck MCP server rather than checked-in SQL. Call
-`get_flight_guide` first for the exact tool arguments, then `create_flight` with:
+Then create the Flight with the `MD_CREATE_FLIGHT` SQL function (no deploy SQL
+is checked in; adapt the arguments to your situation), passing:
 
+- `name`: a Flight name, for example `bigquery_ingest`
 - `source_code`: the contents of [`flight.py`](flight.py), with the USER-EDIT
   BLOCKS edited to your query and destination
 - `requirements_txt`: the contents of [`requirements.txt`](requirements.txt)
-- `access_token_name`: a service account token that can write the destination
-  (list tokens with the `md_access_tokens()` table function); the runtime
-  injects its value as `MOTHERDUCK_TOKEN`
 - `flight_secret_names`: `["gcp_creds"]` so the SA JSON is injected (as
   `gcp_creds_GOOGLE_APPLICATION_CREDENTIALS_JSON`; `flight.py` resolves it)
 - `config`: `GCP_PROJECT_ID` (and optionally `BIGQUERY_DEST_DB`, `EVENT_SOURCE`).
   The billing project is not a secret, so it belongs in config. The SA JSON does
   NOT: keep it in the secret above.
 
+A MotherDuck token is attached to the Flight automatically and injected at run
+time as `MOTHERDUCK_TOKEN`; no token argument is needed.
+
 Create the Flight without a schedule first, trigger one manual run with
-`run_flight`, and confirm it loads the cold-start partition. Then add a schedule
-(for example `0 6 * * *`, daily at 06:00 UTC) by updating the Flight's
-`schedule_cron`. Schedule updates are metadata-only and do not create a new
-Flight version. For a one-off backfill, set `start_dt`/`end_dt` (or `target_dt`)
+`MD_RUN_FLIGHT(flight_id := ...)` (the id is returned by `MD_CREATE_FLIGHT` and
+listed by `MD_FLIGHTS()`), and confirm it loads the cold-start partition. Then
+add a schedule (for example `0 6 * * *`, daily at 06:00 UTC) by updating the
+Flight's `schedule_cron` with `MD_UPDATE_FLIGHT`. Schedule updates are
+metadata-only and do not create a new Flight version. For a one-off backfill, set `start_dt`/`end_dt` (or `target_dt`)
 in the run config.
 
 ## How it works

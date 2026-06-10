@@ -113,8 +113,7 @@ way is the MotherDuck UI: open
 [Settings > Secrets](https://app.motherduck.com/settings/secrets), add a secret of
 type **Flights**, and give it `SNOWFLAKE_USER` and `SNOWFLAKE_PASSWORD` parameters.
 If you would rather use SQL, you can create the same secret from the DuckDB client
-or any SQL connection (the read-only `query` MCP tool rejects `CREATE SECRET`, so
-use `query_rw` or a direct connection):
+or any write-enabled SQL connection (read-only connections reject `CREATE SECRET`):
 
 ```sql
 CREATE SECRET snowflake_creds IN motherduck (
@@ -134,22 +133,24 @@ reads the bare `SNOWFLAKE_USER` / `SNOWFLAKE_PASSWORD` for local runs and otherw
 picks up any env var ending in `_SNOWFLAKE_USER` / `_SNOWFLAKE_PASSWORD`, so the
 secret name you choose does not matter.
 
-Then deploy with the MotherDuck MCP server rather than checked-in SQL. Call
-`get_flight_guide` first for the exact tool arguments, then `create_flight` with:
+Then create the Flight with the `MD_CREATE_FLIGHT` SQL function (no deploy SQL
+is checked in; adapt the arguments to your situation), passing:
 
+- `name`: a Flight name, for example `snowflake_ingest`
 - `source_code`: the contents of [`flight.py`](flight.py)
 - `requirements_txt`: the contents of [`requirements.txt`](requirements.txt)
-- `access_token_name`: a service account token that can write `TARGET_DB` (list
-  tokens with the `md_access_tokens()` table function); the runtime injects its
-  value as `MOTHERDUCK_TOKEN`
 - `config`: the non-secret knobs, for example
   `{"MODE": "discover", "SNOWFLAKE_ACCOUNT": "ab12345.eu-west-1", "SNOWFLAKE_WAREHOUSE": "your_wh", "SNOWFLAKE_DATABASE": "SOURCE_DB", "TARGET_DB": "flights_demo", "DRY_RUN": "true"}`
 - `flight_secret_names`: `["snowflake_creds"]` so the user and password are
   injected (as `snowflake_creds_SNOWFLAKE_USER` / `snowflake_creds_SNOWFLAKE_PASSWORD`;
   `flight.py` resolves them)
 
-Create the Flight with `MODE=discover`, trigger one manual run with `run_flight`,
-and confirm the inventory lands in MotherDuck. Curate `selected`, then run
+A MotherDuck token is attached to the Flight automatically and injected at run
+time as `MOTHERDUCK_TOKEN`; no token argument is needed.
+
+Create the Flight with `MODE=discover`, trigger one manual run with
+`MD_RUN_FLIGHT(flight_id := ...)` (the id is returned by `MD_CREATE_FLIGHT` and
+listed by `MD_FLIGHTS()`), and confirm the inventory lands in MotherDuck. Curate `selected`, then run
 `MODE=move` with `DRY_RUN=false` (a config change, not a new Flight version) to
 copy. Schedule it only if you want a recurring refresh.
 

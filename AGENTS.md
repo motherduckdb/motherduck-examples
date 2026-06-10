@@ -12,14 +12,18 @@ or the starter script.
   commit a generated `catalog.json` unless the user explicitly changes that
   decision.
 - `flight-plans/` is only for reusable, single-file Flight templates
-  (`type: template`). It currently holds `flight-scheduled-s3-ingest`,
-  `flight-dlt-ingest`, and `flight-provision-user-databases`.
+  (`type: template`); see that directory for the current set.
 - All concrete examples live at the repo root, including flight-capable ones that
   carry `features: [flights]` and a "Deploy as a Flight" section. Do not move them
   under `flight-plans/` or a new `examples/` folder.
 - Flight Plan templates (`flight-plans/`) are non-deterministic agent plans:
-  deploy them via README prose and the MotherDuck MCP Flight tools, not
-  checked-in create-flight SQL.
+  deploy them via README prose and the Flight SQL surface (`MD_CREATE_FLIGHT`,
+  `MD_RUN_FLIGHT`); no create-flight SQL is checked in.
+- The Flight runtime attaches a MotherDuck token automatically (injected as
+  `MOTHERDUCK_TOKEN`); never document an `access_token_name` argument in READMEs.
+- READMEs serve humans and agents on any client: MCP tool names
+  (`get_flight_guide`, `ask_docs_question`, ...) belong only in Caveats or
+  Learn more sections; everywhere else reference SQL functions or the UI.
 - A concrete example that deploys as a Flight may ship a deploy script that calls
   the Flight SQL surface (`MD_CREATE_FLIGHT` / `MD_UPDATE_FLIGHT`, resolving by
   name via `MD_FLIGHTS()`) — the same shape as a Dive example's `deploy-dive.sh`.
