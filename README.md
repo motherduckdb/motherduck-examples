@@ -66,9 +66,10 @@ curl -fsSL https://get.motherduck.com | bash -s dbt-ingestion-s3
 ## Flight templates
 
 Reusable, single-file Flights under [`flight-plans/`](flight-plans)
-(`type: template`) that an agent adapts and deploys. Deploy them with the
-MotherDuck MCP server (`get_flight_guide`, then `create_flight`); each README
-lists the config knobs to set.
+(`type: template`) that an agent adapts and deploys. Deploy them with the Flight
+SQL functions (`MD_CREATE_FLIGHT`, then `MD_RUN_FLIGHT`); each README lists the
+config knobs to set. The runtime attaches a MotherDuck token automatically and
+injects it as `MOTHERDUCK_TOKEN`.
 
 - [flight-scheduled-s3-ingest](flight-plans/flight-scheduled-s3-ingest) - Refresh a MotherDuck table from Hive-partitioned S3 Parquet on a schedule, reading only the partition that changes.
 - [flight-dlt-ingest](flight-plans/flight-dlt-ingest) - Run a dlt pipeline into MotherDuck on a schedule, with Parquet loader files and schema evolution.

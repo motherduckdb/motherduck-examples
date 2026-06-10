@@ -94,20 +94,24 @@ LIMIT 20;
 
 ### Deploy as a Flight
 
-Deploy with the MotherDuck MCP server rather than checked-in SQL. Call
-`get_flight_guide` first for the exact tool arguments, then `create_flight` with:
+Create the Flight with the `MD_CREATE_FLIGHT` SQL function (no deploy SQL is
+checked in; adapt the arguments to your situation), passing:
 
+- `name`: a Flight name, for example `dive_usage_metrics`
 - `source_code`: the contents of [`flight.py`](flight.py)
 - `requirements_txt`: the contents of [`requirements.txt`](requirements.txt)
-- `access_token_name`: a service account token that can read the Dives you want
-  counted and write `TARGET_DATABASE` (list tokens with the `md_access_tokens()`
-  table function); the runtime injects its value as `MOTHERDUCK_TOKEN`
 - `config`: the keys from [What you'll adjust](#what-youll-adjust) you want to
   override (omit any you are keeping at default)
 
-Create the Flight without a schedule, trigger one manual run with `run_flight`,
-and read the run logs and the `_latest` view to confirm the metrics look right.
-Then add a schedule by updating the Flight's `schedule_cron`. A daily run
+A MotherDuck token is attached to the Flight automatically and injected at run
+time as `MOTHERDUCK_TOKEN`; no token argument is needed. The run can only count
+Dives that token can read, so deploy from an account that sees them.
+
+Create the Flight without a schedule, trigger one manual run with
+`MD_RUN_FLIGHT(flight_id := ...)` (the id is returned by `MD_CREATE_FLIGHT` and
+listed by `MD_FLIGHTS()`), and read the run logs and the `_latest` view to
+confirm the metrics look right. Then add a schedule by updating the Flight's
+`schedule_cron` with `MD_UPDATE_FLIGHT`. A daily run
 (`0 6 * * *`) or weekly run (`0 6 * * 1`) is a reasonable cadence, since Dive
 source SQL changes slowly. Schedule updates are metadata-only and do not create a
 new Flight version.
@@ -225,8 +229,8 @@ LIMIT 20;
   Rows are written in chunked bulk multi-row `INSERT`s.
 - **Read-only against Dives.** The Flight only reads Dives (`MD_LIST_DIVES`,
   `MD_GET_DIVE`) and writes solely to `TARGET_DATABASE` (the usage, dependency,
-  co-occurrence, and join-key tables). Scope the token accordingly: read access to
-  the Dives you want counted, write access to the target database.
+  co-occurrence, and join-key tables). The automatically attached token needs read
+  access to the Dives you want counted and write access to the target database.
 
 ## Learn more
 

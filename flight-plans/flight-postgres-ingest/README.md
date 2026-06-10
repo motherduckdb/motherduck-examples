@@ -103,8 +103,8 @@ non-zero if any table failed after retries.
 
 First store the connection as a **Flights secret** named `pg` (UI:
 [Settings > Secrets](https://app.motherduck.com/settings/secrets), type
-**Flights**). Or via SQL from a write connection (the read-only `query` MCP tool
-rejects `CREATE SECRET`; use `query_rw` or a direct connection):
+**Flights**). Or via SQL from a write-enabled connection (read-only connections
+reject `CREATE SECRET`):
 
 ```sql
 CREATE SECRET pg IN motherduck (
@@ -120,16 +120,20 @@ CREATE SECRET pg IN motherduck (
 );
 ```
 
-Then deploy with the MotherDuck MCP server (not checked-in SQL). Call
-`get_flight_guide` first for exact tool arguments, then `create_flight` with:
+Then create the Flight with the `MD_CREATE_FLIGHT` SQL function (no deploy SQL
+is checked in; adapt the arguments to your situation), passing:
 
+- `name`: a Flight name, for example `postgres_ingest`
 - `source_code`: [`flight.py`](flight.py) (no edits for the default "mirror everything non-system")
 - `requirements_txt`: [`requirements.txt`](requirements.txt)
-- `access_token_name`: a token that can write `TARGET_DATABASE` (list via `md_access_tokens()`); injected as `MOTHERDUCK_TOKEN`
 - `flight_secret_names`: `["pg"]` so the Postgres connection is injected
 - `config`: at least `TARGET_DATABASE`, plus any `INCLUDED_*`/`EXCLUDED_*` scoping and `MOTHERDUCK_HOST` if non-default. The connection stays in the `pg` secret, never config.
 
-Create without a schedule, run once with `run_flight`, and confirm
+A MotherDuck token is attached to the Flight automatically and injected at run
+time as `MOTHERDUCK_TOKEN`; no token argument is needed.
+
+Create without a schedule, run once with `MD_RUN_FLIGHT(flight_id := ...)` (the
+id is returned by `MD_CREATE_FLIGHT` and listed by `MD_FLIGHTS()`), and confirm
 `<TARGET_DATABASE>.main.flight_tracker` has one row per table. 
 Get feedback from the user about whether or not a schedule is desired and what it should be.
 

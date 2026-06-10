@@ -78,23 +78,27 @@ DRY_RUN=false uv run --with duckdb==1.5.2 flight.py
 
 ### Deploy as a Flight
 
-Deploy with the MotherDuck MCP server rather than checked-in SQL. Call
-`get_flight_guide` first for the exact tool arguments, then `create_flight` with:
+Create the Flight with the `MD_CREATE_FLIGHT` SQL function (no deploy SQL is
+checked in; adapt the arguments to your situation), passing:
 
+- `name`: a Flight name, for example `provision_user_databases`
 - `source_code`: the contents of [`flight.py`](flight.py)
 - `requirements_txt`: the contents of [`requirements.txt`](requirements.txt)
-- `access_token_name`: an admin or service account token name (list them with the
-  `md_access_tokens()` table function); the runtime injects its value as
-  `MOTHERDUCK_TOKEN`
 - `config`: the keys from [What you'll adjust](#what-youll-adjust) you want to
   override (omit any you are keeping at default)
 
-Create the Flight without a schedule, trigger one manual run with `run_flight`
-while `DRY_RUN` is `true`, and read the ledger and run logs to confirm the plan.
-Then point `USERS_TABLE` at real usernames (or replace the seeded demo rows), set
-`DRY_RUN=false`, and run again to provision. Add a schedule by updating the
-Flight's `schedule_cron` only once you trust the control table; schedule updates
-are metadata-only and do not create a new Flight version.
+A MotherDuck token is attached to the Flight automatically and injected at run
+time as `MOTHERDUCK_TOKEN`; no token argument is needed. This Flight creates
+databases and shares, so deploy it from an account allowed to do both.
+
+Create the Flight without a schedule, trigger one manual run with
+`MD_RUN_FLIGHT(flight_id := ...)` (the id is returned by `MD_CREATE_FLIGHT` and
+listed by `MD_FLIGHTS()`) while `DRY_RUN` is `true`, and read the ledger and run
+logs to confirm the plan. Then point `USERS_TABLE` at real usernames (or replace
+the seeded demo rows), set `DRY_RUN=false`, and run again to provision. Add a
+schedule by updating the Flight's `schedule_cron` with `MD_UPDATE_FLIGHT` only
+once you trust the control table; schedule updates are metadata-only and do not
+create a new Flight version.
 
 ## How it works
 

@@ -57,6 +57,6 @@ it clones this repo at `NBA_FLIGHT_REPO_BRANCH` (default `main`), `uv sync`s the
 package, and runs the entrypoint from the synced venv. So you only run the deploy
 command for the **first** registration (or when the bootstrapper, token,
 schedule, config, or requirements change) — **shipping new pipeline code
-afterwards is just a `git push`** to the branch the bootstrapper clones. The
-MotherDuck MCP `create_flight` / `update_flight` tools are the agent-driven
-equivalent if you'd rather not run the script.
+afterwards is just a `git push`** to the branch the bootstrapper clones. If
+you'd rather not run the script, call the same `MD_CREATE_FLIGHT` /
+`MD_UPDATE_FLIGHT` SQL functions from any MotherDuck connection.

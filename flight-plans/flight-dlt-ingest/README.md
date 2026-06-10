@@ -72,22 +72,25 @@ default inline, for example `GITHUB_REPOS=duckdb/duckdb uv run --with-requiremen
 
 ### Deploy as a Flight
 
-Deploy with the MotherDuck MCP server rather than checked-in SQL. Call
-`get_flight_guide` first for the exact tool arguments, then `create_flight` with:
+Create the Flight with the `MD_CREATE_FLIGHT` SQL function (no deploy SQL is
+checked in; adapt the arguments to your situation), passing:
 
+- `name`: a Flight name, for example `dlt_ingest`
 - `source_code`: the contents of [`flight.py`](flight.py)
 - `requirements_txt`: the contents of [`requirements.txt`](requirements.txt)
-- `access_token_name`: a service account token name (list them with the
-  `md_access_tokens()` table function); the runtime injects its value as
-  `MOTHERDUCK_TOKEN`
 - `config`: the keys from [What you'll adjust](#what-youll-adjust) you want to
   override (omit any you are keeping at default)
 
+A MotherDuck token is attached to the Flight automatically and injected at run
+time as `MOTHERDUCK_TOKEN`; no token argument is needed.
+
 Create the Flight without a schedule first, trigger one manual run with
-`run_flight`, and confirm it succeeds and the dlt tables and ledger row appear.
-Once the manual run is green, add a daily schedule (`15 7 * * *`, 07:15 UTC, is a
-reasonable default) by updating the Flight's `schedule_cron`. Schedule updates are
-metadata-only and do not create a new Flight version.
+`MD_RUN_FLIGHT(flight_id := ...)` (the id is returned by `MD_CREATE_FLIGHT` and
+listed by `MD_FLIGHTS()`), and confirm it succeeds and the dlt tables and ledger
+row appear. Once the manual run is green, add a daily schedule (`15 7 * * *`,
+07:15 UTC, is a reasonable default) by updating the Flight's `schedule_cron` with
+`MD_UPDATE_FLIGHT`. Schedule updates are metadata-only and do not create a new
+Flight version.
 
 ## How it works
 
@@ -139,8 +142,8 @@ direct inserts are fine.
   [Settings > Secrets](https://app.motherduck.com/settings/secrets), or
   `CREATE SECRET ... (TYPE flights, ...)` from the DuckDB client), which the
   runtime injects as env vars you read with `os.environ`.
-- **Keep the token out of config.** Select a token on the Flight so
-  `MOTHERDUCK_TOKEN` is injected at runtime; do not place it in `config`.
+- **Keep the token out of config.** The runtime attaches a MotherDuck token and
+  injects it as `MOTHERDUCK_TOKEN`; never place a token in `config`.
 
 ## Security
 

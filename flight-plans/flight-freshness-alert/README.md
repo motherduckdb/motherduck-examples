@@ -109,9 +109,8 @@ Store the webhook URL from [Create the Slack webhook](#create-the-slack-webhook)
 a MotherDuck **Flights secret**. The simplest way is the MotherDuck UI: open
 [Settings > Secrets](https://app.motherduck.com/settings/secrets), add a secret of
 type **Flights**, and give it a `SLACK_WEBHOOK_URL` parameter. If you would rather
-use SQL, you can create the same secret from the DuckDB client or any SQL
-connection (the read-only `query` MCP tool rejects `CREATE SECRET`, so use
-`query_rw` or a direct connection):
+use SQL, you can create the same secret from the DuckDB client or any
+write-enabled SQL connection (read-only connections reject `CREATE SECRET`):
 
 ```sql
 CREATE SECRET freshness_slack IN motherduck (
@@ -127,24 +126,26 @@ the unquoted secret name into the prefix.) `flight.py` handles this: it reads
 `SLACK_WEBHOOK_URL` for local runs and otherwise picks up any env var ending in
 `_SLACK_WEBHOOK_URL`, so the secret name you choose does not matter.
 
-Then deploy with the MotherDuck MCP server rather than checked-in SQL. Call
-`get_flight_guide` first for the exact tool arguments, then `create_flight` with:
+Then create the Flight with the `MD_CREATE_FLIGHT` SQL function (no deploy SQL
+is checked in; adapt the arguments to your situation), passing:
 
+- `name`: a Flight name, for example `freshness_alert`
 - `source_code`: the contents of [`flight.py`](flight.py), with `CHECKS` edited to your tables
 - `requirements_txt`: the contents of [`requirements.txt`](requirements.txt)
-- `access_token_name`: a service account token that can read the checked tables
-  and write `RESULTS_TABLE` (list tokens with the `md_access_tokens()` table
-  function); the runtime injects its value as `MOTHERDUCK_TOKEN`
 - `flight_secret_names`: `["freshness_slack"]` so the webhook is injected (as
   `freshness_slack_SLACK_WEBHOOK_URL`; `flight.py` resolves it)
 
-No `config` is needed: every knob lives in the code.
+No `config` is needed: every knob lives in the code. A MotherDuck token is
+attached to the Flight automatically and injected at run time as
+`MOTHERDUCK_TOKEN`; no token argument is needed.
 
 Create the Flight without a schedule first, trigger one manual run with
-`run_flight`, and confirm it succeeds and a Slack alert arrives. Then edit
-`CHECKS` to your real tables and add a schedule (for example `0 * * * *`, hourly)
-by updating the Flight's `schedule_cron`. Schedule updates are metadata-only and
-do not create a new Flight version.
+`MD_RUN_FLIGHT(flight_id := ...)` (the id is returned by `MD_CREATE_FLIGHT` and
+listed by `MD_FLIGHTS()`), and confirm it succeeds and a Slack alert arrives.
+Then edit `CHECKS` to your real tables and add a schedule (for example
+`0 * * * *`, hourly) by updating the Flight's `schedule_cron` with
+`MD_UPDATE_FLIGHT`. Schedule updates are metadata-only and do not create a new
+Flight version.
 
 ## How it works
 

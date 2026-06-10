@@ -99,9 +99,8 @@ this repo at `NBA_FLIGHT_REPO_BRANCH` (default `main`) and runs the entrypoint â
 so you only deploy for the **first** registration (or when the bootstrapper,
 token, schedule, config, or requirements change); **shipping new pipeline code
 afterwards is just a `git push`**. `nba_nightly` carries
-`schedule_cron = "0 16 * * *"`; `nba_backfill` is on-demand (`run_flight`). The
-MCP `create_flight` / `update_flight` tools are the agent-driven equivalent. See
-[`flight/README.md`](./flight/README.md) for details.
+`schedule_cron = "0 16 * * *"`; `nba_backfill` is on-demand (trigger it with
+`MD_RUN_FLIGHT`). See [`flight/README.md`](./flight/README.md) for details.
 
 To deploy the Dive, run [`dive/scripts/deploy-dive.sh`](./dive/scripts/deploy-dive.sh):
 it builds the bundle and resolves the Dive by title via `MD_LIST_DIVES()`,
