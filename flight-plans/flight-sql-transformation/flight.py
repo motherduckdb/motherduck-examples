@@ -37,6 +37,58 @@ log = logging.getLogger("sql_dag")
 DIALECT = "duckdb"
 
 
+# ===========================================================================
+# The SQL Statements to execute. Edit this function to use your own SQL!
+# ===========================================================================
+def sql_statements(database: str) -> list[str]:
+    """One example chain over MotherDuck's public ``sample_data.nyc.taxi``.
+    Replace these statements with your own!
+    It exercises a table, a view, a scalar macro, a diamond (two summaries built
+    off one view and joined back together), and a dependency on a table this
+    Flight does not create, ``sample_data.nyc.taxi``
+    """
+    q = f"{_ident(database)}.{_ident('main')}"
+    return [
+        # Intentionally putting the first step last to test the reordering
+        f"""
+        CREATE OR REPLACE VIEW {q}.clean_trips AS
+        SELECT payment_type, fare_amount, tip_amount
+        FROM {q}.raw_trips
+        WHERE fare_amount > 0
+        """,
+        f"""
+        CREATE OR REPLACE MACRO {q}.tip_pct(tip, fare) AS
+        tip / NULLIF(fare, 0)
+        """,
+        # Diamond: fare_by_payment and tips_by_payment both read the view...
+        f"""
+        CREATE OR REPLACE TABLE {q}.fare_by_payment AS
+        SELECT payment_type, count(*) AS trips, avg(fare_amount) AS avg_fare
+        FROM {q}.clean_trips
+        GROUP BY payment_type
+        """,
+        f"""
+        CREATE OR REPLACE TABLE {q}.tips_by_payment AS
+        SELECT payment_type, avg({q}.tip_pct(tip_amount, fare_amount)) AS avg_tip_pct
+        FROM {q}.clean_trips
+        GROUP BY payment_type
+        """,
+        # ...and payment_overview joins both branches back together.
+        f"""
+        CREATE OR REPLACE TABLE {q}.payment_overview AS
+        SELECT f.payment_type, f.trips, f.avg_fare, t.avg_tip_pct
+        FROM {q}.fare_by_payment AS f
+        JOIN {q}.tips_by_payment AS t USING (payment_type)
+        """,
+        f"""
+        CREATE OR REPLACE TABLE {q}.raw_trips AS
+        SELECT payment_type, fare_amount, tip_amount, trip_distance
+        FROM sample_data.nyc.taxi          -- external: not created by this Flight
+        LIMIT 200000
+        """,
+    ]
+
+
 def _ident(name: str) -> str:
     """Quote a SQL identifier so a config/env value cannot break out of its
     syntactic position. A ``"`` inside the name is doubled (the SQL escape), so
@@ -439,58 +491,6 @@ def run_dag(  # noqa: C901
             launch_ready()
 
     return RunReport([results[i] for i in range(len(dag.nodes))])
-
-
-# ===========================================================================
-# The SQL Statements to execute. Edit this function to use your own SQL!
-# ===========================================================================
-def sql_statements(database: str) -> list[str]:
-    """One example chain over MotherDuck's public ``sample_data.nyc.taxi``.
-    Replace these statements with your own!
-    It exercises a table, a view, a scalar macro, a diamond (two summaries built
-    off one view and joined back together), and a dependency on a table this
-    Flight does not create, ``sample_data.nyc.taxi``
-    """
-    q = f"{_ident(database)}.{_ident('main')}"
-    return [
-        # Intentionally putting the first step last to test the reordering
-        f"""
-        CREATE OR REPLACE VIEW {q}.clean_trips AS
-        SELECT payment_type, fare_amount, tip_amount
-        FROM {q}.raw_trips
-        WHERE fare_amount > 0
-        """,
-        f"""
-        CREATE OR REPLACE MACRO {q}.tip_pct(tip, fare) AS
-        tip / NULLIF(fare, 0)
-        """,
-        # Diamond: fare_by_payment and tips_by_payment both read the view...
-        f"""
-        CREATE OR REPLACE TABLE {q}.fare_by_payment AS
-        SELECT payment_type, count(*) AS trips, avg(fare_amount) AS avg_fare
-        FROM {q}.clean_trips
-        GROUP BY payment_type
-        """,
-        f"""
-        CREATE OR REPLACE TABLE {q}.tips_by_payment AS
-        SELECT payment_type, avg({q}.tip_pct(tip_amount, fare_amount)) AS avg_tip_pct
-        FROM {q}.clean_trips
-        GROUP BY payment_type
-        """,
-        # ...and payment_overview joins both branches back together.
-        f"""
-        CREATE OR REPLACE TABLE {q}.payment_overview AS
-        SELECT f.payment_type, f.trips, f.avg_fare, t.avg_tip_pct
-        FROM {q}.fare_by_payment AS f
-        JOIN {q}.tips_by_payment AS t USING (payment_type)
-        """,
-        f"""
-        CREATE OR REPLACE TABLE {q}.raw_trips AS
-        SELECT payment_type, fare_amount, tip_amount, trip_distance
-        FROM sample_data.nyc.taxi          -- external: not created by this Flight
-        LIMIT 200000
-        """,
-    ]
 
 
 def main() -> None:
