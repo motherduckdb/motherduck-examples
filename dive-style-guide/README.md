@@ -53,8 +53,8 @@ What each one changes, beyond the palette:
 
 - **Swiss minimal.** Hairline rules instead of cards, uppercase micro-labels, three KPIs at normal weight, no gridlines, one red accent for every series. Reads as a printed report.
 - **Paper.** Serif throughout including axis ticks, cream stock, clay line, a dashed mean line, and the observation in an italic note under the chart rather than in the title.
-- **Editorial.** Newsroom conventions: a red marker block, a serif headline that states the finding with the comparison behind it, a sans dek carrying place, period and unit, bars with the scale on the right, and a source line on every page.
-- **Terminal.** The one style where panel chrome is correct. Monospace everywhere, bracketed `snake_case` section headers, green values with amber anomaly callouts, a status line closing the page. For dashboards people watch during an incident, not for anything a customer reads.
+- **Editorial.** Financial Times conventions: pink stock, a claret marker block, oxford blue bars with claret on the one day the headline is about, a serif headline that states the finding with the comparison behind it, a sans dek carrying place, period and unit, the scale on the right, and a source line on every page.
+- **Terminal.** Mission control, and the one style where panel chrome is correct. Deep indigo ground, monospace everywhere, violet bracketed `snake_case` section headers, periwinkle values, amber reserved for anomalies, a status line closing the page. For dashboards people watch during an incident, not for anything a customer reads.
 
 Run one as-is to see the shape of a working Guide, then edit the palette and copy rules. Only one `dives` Guide should govern a given look — installing several leaves the agent to choose.
 
@@ -110,8 +110,8 @@ FROM MD_LIST_GUIDES(topic = 'dives');
 | `dive-style-guide.sql` | The annotated blank: creates a Guide under the reserved `dives` topic with a worked style guide to edit, and commented follow-ups for publishing and verifying |
 | `styles/swiss-minimal.sql` | White field, black ink, one red accent, rules instead of cards |
 | `styles/paper.sql` | Cream stock, serif throughout, clay accent, minimum ink |
-| `styles/editorial.sql` | Newsroom graphic: tinted paper, red marker, finding in the headline, source line |
-| `styles/terminal.sql` | Dark operational console, monospace, green values and amber warnings |
+| `styles/editorial.sql` | FT news graphic: pink paper, oxford blue with a claret highlight, finding in the headline, source line |
+| `styles/terminal.sql` | Mission-control console: deep indigo, monospace, periwinkle values and amber warnings |
 | `preview/` | Vite harness that renders each style at the Dive viewport and writes `assets/*.png`. `npm install && npm run shoot` |
 | `assets/*.png` | The rendered screenshots used above |
 
