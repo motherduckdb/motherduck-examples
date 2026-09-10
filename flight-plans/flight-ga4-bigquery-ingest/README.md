@@ -20,8 +20,10 @@ published_date: 2026-08-24
 
 # Incrementally ingest GA4 BigQuery exports into MotherDuck
 
-This single-file Flight copies GA4's daily `events_YYYYMMDD` BigQuery export
-into a MotherDuck table. It uses `bigquery_query` rather than
+This single-file Flight copies every column from GA4's daily
+`events_YYYYMMDD` BigQuery export into a MotherDuck table. It keeps nested
+fields such as `event_params` and `items`, and converts `event_date` to a
+DuckDB `DATE`. It uses `bigquery_query` rather than
 `bigquery_scan`: GA4 stores daily data in wildcard tables, and the Flight uses
 BigQuery's `_TABLE_SUFFIX` to read only the dates it is replacing.
 
@@ -41,6 +43,9 @@ to three days after an event date. It writes one run record to
 - Which date should initialize the migration, and how often should the Flight
   run?
 - Which MotherDuck database, schema, and table should receive the raw events?
+- Do you need raw events and nested parameters, or only aggregated reporting
+  metrics? For reporting metrics, use
+  [the GA4 Data API dlt Flight](../flight-dlt-ga4-ingest/).
 
 ## Caveats
 
@@ -48,8 +53,12 @@ to three days after an event date. It writes one run record to
   not in MotherDuck cloud SQL or a read-only MCP query session.
 - GA4's public sample is useful for testing, but it does not use the normal
   `analytics_<property_id>` dataset name.
-- This is a raw landing table. Extract nested event parameters and model metrics
-  in later staging and analytics steps.
+- This is a raw landing table. It retains nested values, which makes the initial
+  copy larger than an aggregated report. Extract event parameters and model
+  metrics in later staging and analytics steps.
+- For dashboards and KPIs that do not need raw events, use
+  [the GA4 Data API dlt Flight](../flight-dlt-ga4-ingest/). It reads aggregated
+  reports directly from GA4 and does not require a BigQuery export.
 
 ## What you'll adjust
 
@@ -57,7 +66,7 @@ to three days after an event date. It writes one run record to
 | --- | --- |
 | `GCP_PROJECT_ID` | BigQuery billing project. |
 | `GA4_SOURCE_TABLE_PATTERN` | `<project>.analytics_<property_id>.events_*`; use the public sample pattern for a smoke test. |
-| `COLD_START_DATE` | First day when the destination is empty. |
+| `COLD_START_DATE` | First day when the destination is empty. Required only when `START_DATE` and `END_DATE` are unset. |
 | `DESTINATION_DATABASE` / `DESTINATION_SCHEMA` / `DESTINATION_TABLE` | MotherDuck raw landing relation. |
 | `START_DATE` / `END_DATE` | Optional inclusive backfill range. Set both or neither. |
 
@@ -117,4 +126,5 @@ they are included in SQL; dates and BigQuery credentials are bound parameters.
 
 - [GA4 BigQuery export schema](https://support.google.com/analytics/answer/7029846)
 - [BigQuery Flight template](../flight-bigquery-ingest/)
+- [GA4 Data API dlt Flight for aggregated reporting](../flight-dlt-ga4-ingest/)
 - Flight mechanics, scheduling, and logs: MCP `get_flight_guide`

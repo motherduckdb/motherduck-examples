@@ -67,14 +67,7 @@ def configure_gcp_credentials() -> Path | None:
 def build_ga4_query(pattern: str, start_date: dt.date, end_date: dt.date) -> str:
     return f"""
         SELECT
-            PARSE_DATE('%Y%m%d', event_date) AS event_date,
-            event_timestamp,
-            event_name,
-            user_pseudo_id,
-            platform,
-            geo.country AS country,
-            traffic_source.source AS traffic_source,
-            traffic_source.medium AS traffic_medium
+            * REPLACE (PARSE_DATE('%Y%m%d', event_date) AS event_date)
         FROM `{pattern}`
         WHERE _TABLE_SUFFIX BETWEEN '{start_date:%Y%m%d}' AND '{end_date:%Y%m%d}'
     """
@@ -113,7 +106,9 @@ def main() -> None:
     database = identifier("DESTINATION_DATABASE", env("DESTINATION_DATABASE", "ga4"))
     schema = identifier("DESTINATION_SCHEMA", env("DESTINATION_SCHEMA", "raw"))
     table = identifier("DESTINATION_TABLE", env("DESTINATION_TABLE", "events"))
-    if not env("COLD_START_DATE"):
+    if not env("COLD_START_DATE") and not (
+        env("START_DATE") and env("END_DATE")
+    ):
         raise ValueError("COLD_START_DATE is required (YYYY-MM-DD).")
 
     temporary_credentials = configure_gcp_credentials()
