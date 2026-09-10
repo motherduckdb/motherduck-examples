@@ -1,9 +1,9 @@
 /**
  * Terminal — written from `styles/terminal.sql`.
  *
- * Dark operational console: monospace throughout, bracketed section headers,
- * bordered panels, dotted grid, green primary with amber for the anomaly, and a
- * status line at the bottom.
+ * Mission-control console: deep indigo, monospace throughout, bracketed section
+ * headers, bordered panels, dotted grid, periwinkle values with violet
+ * secondaries and amber for the anomaly, and a status line at the bottom.
  */
 import {
 	CartesianGrid,
@@ -24,13 +24,14 @@ export const REQUIRED_DATABASES = [
 	},
 ];
 
-const BG = '#0d1117';
-const PANEL = '#161b22';
-const BORDER = '#21262d';
-const TEXT = '#c9d1d9';
-const DIM = '#8b949e';
-const GREEN = '#3fb950';
-const AMBER = '#d29922';
+const BG = '#0a0e23';
+const PANEL = '#141936';
+const BORDER = '#262c52';
+const TEXT = '#d6dcf5';
+const DIM = '#8590c4';
+const PERIWINKLE = '#a5b4fc';
+const VIOLET = '#c084fc';
+const AMBER = '#ffb454';
 
 const N = (value: unknown): number => (value == null ? 0 : Number(value));
 
@@ -83,7 +84,7 @@ export default function TaxiRevenueDive() {
 						</p>
 						<p
 							className="text-2xl tabular-nums mt-1"
-							style={{ color: GREEN }}
+							style={{ color: PERIWINKLE }}
 						>
 							{kpi.value}
 						</p>
@@ -91,7 +92,7 @@ export default function TaxiRevenueDive() {
 				))}
 			</div>
 
-			<p className="text-xs uppercase mt-5 mb-1" style={{ color: DIM }}>
+			<p className="text-xs uppercase mt-5 mb-1" style={{ color: VIOLET }}>
 				[ revenue_per_day · usd_millions ]
 			</p>
 			<div
@@ -119,7 +120,7 @@ export default function TaxiRevenueDive() {
 						<Line
 							type="linear"
 							dataKey="revenue"
-							stroke={GREEN}
+							stroke={PERIWINKLE}
 							strokeWidth={1.5}
 							dot={false}
 						/>
@@ -130,7 +131,7 @@ export default function TaxiRevenueDive() {
 				! min 11-{low.day} ${(low.revenue / 1e6).toFixed(2)}M
 			</p>
 
-			<p className="text-xs uppercase mt-5 mb-1" style={{ color: DIM }}>
+			<p className="text-xs uppercase mt-5 mb-1" style={{ color: VIOLET }}>
 				[ revenue_by_payment_method ]
 			</p>
 			<table className="w-full text-xs tabular-nums">

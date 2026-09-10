@@ -1,14 +1,16 @@
 /**
  * Editorial — written from `styles/editorial.sql`.
  *
- * Newsroom conventions: tinted paper, a red marker block, a serif headline that
- * states the finding, a sans dek carrying the measure and units, bars with the
- * scale on the right, and a source line.
+ * Financial Times conventions: FT pink stock, oxford blue bars with a claret
+ * highlight on the point the headline names, a serif headline stating the
+ * finding, a sans dek carrying the measure and units, the scale on the right,
+ * and a source line.
  */
 import {
 	Bar,
 	BarChart,
 	CartesianGrid,
+	Cell,
 	ResponsiveContainer,
 	XAxis,
 	YAxis,
@@ -26,9 +28,10 @@ export const REQUIRED_DATABASES = [
 
 const PAPER = '#fff1e5';
 const INK = '#33302e';
-const RED = '#e3120b';
+const OXFORD = '#0f5499';
+const CLARET = '#990f3d';
 const MUTED = '#66605c';
-const RULE = '#cec6b5';
+const RULE = '#cec6b4';
 
 const N = (value: unknown): number => (value == null ? 0 : Number(value));
 
@@ -43,6 +46,10 @@ export default function TaxiRevenueDive() {
 		revenue: N(row.revenue),
 	}));
 	const methods = (Array.isArray(payments.data) ? payments.data : []).slice(0, 3);
+	const lowIndex = series.reduce(
+		(low, point, index) => (point.revenue < series[low].revenue ? index : low),
+		0,
+	);
 
 	const kpis = [
 		{ label: 'Revenue', value: `$${(N(totals.revenue) / 1e6).toFixed(1)}M` },
@@ -56,12 +63,12 @@ export default function TaxiRevenueDive() {
 			className="p-8"
 			style={{ background: PAPER, color: INK, minHeight: '100vh' }}
 		>
-			<div style={{ background: RED, height: 5, width: 44 }} />
+			<div style={{ background: CLARET, height: 5, width: 44 }} />
 			<h1 className="font-serif text-3xl font-bold mt-3 leading-tight">
 				Thanksgiving costs taxis a third of a Thursday
 			</h1>
 			<p className="text-sm mt-2" style={{ color: MUTED }}>
-				New York City yellow taxi revenue, November 2022, USD
+				New York City yellow taxi revenue, November 2022, USD millions
 			</p>
 
 			<div
@@ -70,7 +77,7 @@ export default function TaxiRevenueDive() {
 			>
 				{kpis.map((kpi) => (
 					<div key={kpi.label}>
-						<p className="text-3xl font-semibold tabular-nums" style={{ color: RED }}>
+						<p className="text-3xl font-semibold tabular-nums" style={{ color: OXFORD }}>
 							{kpi.value}
 						</p>
 						<p className="text-xs mt-1" style={{ color: MUTED }}>
@@ -82,7 +89,7 @@ export default function TaxiRevenueDive() {
 
 			<p className="text-sm font-semibold mt-4">Revenue per day</p>
 			<p className="text-xs mb-1" style={{ color: MUTED }}>
-				USD millions
+				Thanksgiving in claret
 			</p>
 			<ResponsiveContainer width="100%" height={168}>
 				<BarChart data={series} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
@@ -103,7 +110,14 @@ export default function TaxiRevenueDive() {
 						tick={{ fontSize: 10, fill: MUTED }}
 						tickFormatter={(value) => (value / 1e6).toFixed(1)}
 					/>
-					<Bar dataKey="revenue" fill={RED} />
+					<Bar dataKey="revenue" fill={OXFORD}>
+						{series.map((point, index) => (
+							<Cell
+								key={point.day}
+								fill={index === lowIndex ? CLARET : OXFORD}
+							/>
+						))}
+					</Bar>
 				</BarChart>
 			</ResponsiveContainer>
 
