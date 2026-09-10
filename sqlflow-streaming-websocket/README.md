@@ -114,6 +114,9 @@ works on an empty account.
 
 ## Run it
 
+You need Docker and a MotherDuck token. Every command below runs
+`turbolytics/sql-flow:v1.1.0`. Pass `IMAGE` to use a different release.
+
 Set your token:
 
 ```bash
