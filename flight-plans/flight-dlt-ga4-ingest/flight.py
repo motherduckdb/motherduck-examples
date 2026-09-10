@@ -2,6 +2,7 @@ import json
 import os
 import re
 from collections.abc import Iterator
+from decimal import Decimal
 
 import dlt
 import duckdb
@@ -24,30 +25,38 @@ def ga4_rows(
     #
     # This is the aggregated reporting surface (sessions, users, pageviews, etc.
     # by dimension) -- NOT raw events. If you need event-level GA4 data, use the
-    # native GA4 -> BigQuery export with the flight-bigquery-ingest template
+    # native GA4 -> BigQuery export with the flight-ga4-bigquery-ingest template
     # instead; the Data API cannot return raw events.
     #
-    # Credentials come from the GA4_SERVICE_ACCOUNT_JSON Flights secret (the full
-    # service-account key JSON), read from the environment -- never from config.
+    # Credentials come from a local GA4_SERVICE_ACCOUNT_JSON environment value or
+    # a prefixed value injected by an attached Flights secret, never from config.
     from google.analytics.data_v1beta import BetaAnalyticsDataClient
     from google.analytics.data_v1beta.types import (
         DateRange,
         Dimension,
         Metric,
+        MetricType,
         RunReportRequest,
     )
     from google.oauth2 import service_account
 
-    sa_info = json.loads(os.environ["GA4_SERVICE_ACCOUNT_JSON"])
+    service_account_json = flight_secret_value("GA4_SERVICE_ACCOUNT_JSON")
+    if not service_account_json:
+        raise RuntimeError(
+            "Set GA4_SERVICE_ACCOUNT_JSON locally, or attach a TYPE flights secret "
+            "with a GA4_SERVICE_ACCOUNT_JSON parameter."
+        )
+    sa_info = json.loads(service_account_json)
     credentials = service_account.Credentials.from_service_account_info(
         sa_info,
         scopes=["https://www.googleapis.com/auth/analytics.readonly"],
     )
     client = BetaAnalyticsDataClient(credentials=credentials)
 
-    # GA4 caps a single report page at 10k rows; page through with offset until
-    # we have read row_count rows.
-    page_size, offset = 10000, 0
+    # GA4 returns up to 250k rows per report request. Page until we have read
+    # the full response so high-cardinality reports do not waste quota on small
+    # default pages.
+    page_size, offset = 250_000, 0
     while True:
         response = client.run_report(
             RunReportRequest(
@@ -57,6 +66,7 @@ def ga4_rows(
                 date_ranges=[DateRange(start_date=start_date, end_date=end_date)],
                 limit=page_size,
                 offset=offset,
+                keep_empty_rows=True,
             )
         )
         for row in response.rows:
@@ -66,7 +76,15 @@ def ga4_rows(
             }
             for i, metric in enumerate(metrics):
                 raw = row.metric_values[i].value
-                record[metric] = float(raw) if raw not in (None, "") else None
+                metric_type = response.metric_headers[i].type
+                if raw in (None, ""):
+                    record[metric] = None
+                elif metric_type in {MetricType.TYPE_INTEGER, MetricType.TYPE_MILLISECONDS}:
+                    record[metric] = int(raw)
+                elif metric_type == MetricType.TYPE_CURRENCY:
+                    record[metric] = Decimal(raw)
+                else:
+                    record[metric] = float(raw)
             yield record
 
         offset += page_size
@@ -108,13 +126,18 @@ def main() -> None:
     ]
     start_date = env("GA4_START_DATE", "7daysAgo")
     end_date = env("GA4_END_DATE", "yesterday")
-    # Merge key defaults to the dimension columns, so re-pulling a lookback window
-    # heals GA4's late-arriving data instead of duplicating or freezing it.
+    # Primary keys identify report rows. The date merge key replaces each returned
+    # date partition, so rows that disappear from a revised report do not remain.
     primary_key = [
         key.strip()
         for key in env("PRIMARY_KEY", ",".join(dimensions)).split(",")
         if key.strip()
     ]
+    if write_disposition == "merge" and "date" not in dimensions:
+        raise ValueError(
+            "GA4_DIMENSIONS must include date when WRITE_DISPOSITION=merge so each "
+            "refreshed date can be replaced. Use append or replace without date."
+        )
 
     # dlt writes working files under HOME; a Flight has a writable /tmp.
     os.environ.setdefault("HOME", "/tmp")
@@ -132,11 +155,15 @@ def main() -> None:
         destination="motherduck",
         dataset_name=dataset_name,
     )
-    load_info = pipeline.run(
+    report_rows = dlt.resource(
         ga4_rows(property_id, dimensions, metrics, start_date, end_date),
-        table_name=table_name,
+        name=table_name,
         write_disposition=write_disposition,
         primary_key=primary_key,
+        merge_key="date" if write_disposition == "merge" else None,
+    )
+    load_info = pipeline.run(
+        report_rows,
         # Prefer Parquet loader files over row-wise insert_values so larger
         # sources stay on a bulk-loading path. Keep this unless you have measured
         # a reason to change it.
@@ -168,6 +195,16 @@ def main() -> None:
 def env(name: str, default: str) -> str:
     value = os.environ.get(name, default).strip()
     return value or default
+
+
+def flight_secret_value(name: str) -> str:
+    if value := os.environ.get(name, "").strip():
+        return value
+    suffix = f"_{name}"
+    return next(
+        (value.strip() for key, value in os.environ.items() if key.endswith(suffix) and value.strip()),
+        "",
+    )
 
 
 def validate_identifier(name: str, value: str) -> str:

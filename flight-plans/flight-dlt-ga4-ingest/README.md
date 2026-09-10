@@ -37,7 +37,7 @@ like `sessions` and `totalUsers` broken down by dimensions like `date` and
 
 - Want **dashboards / KPI reporting**? This template is the right fit.
 - Want **raw GA4 events**? Use the native **GA4 → BigQuery export** and ingest
-  with [flight-bigquery-ingest](../flight-bigquery-ingest) instead.
+  with [the GA4 BigQuery Flight](../flight-ga4-bigquery-ingest/) instead.
 
 ## How it works
 
@@ -50,14 +50,14 @@ like `sessions` and `totalUsers` broken down by dimensions like `date` and
 2. Connect to MotherDuck (`md:`) and `CREATE DATABASE IF NOT EXISTS` the
    destination, because dlt creates the dataset and tables but not the database.
 3. Build a dlt pipeline and `run()` the `ga4_rows()` source with
-   `loader_file_format="parquet"` and the configured write disposition and
-   primary key.
+   `loader_file_format="parquet"`. In merge mode, the date is the merge key and
+   the configured dimension columns are the primary key.
 4. Append one row to the run ledger capturing the dlt load package summary.
 
 `ga4_rows()` authenticates with a Google service account, calls the GA4 Data API
 `runReport` for the configured property, dimensions, metrics, and date range, and
-yields one dict per report row. It pages through results in 10k-row pages (the
-GA4 per-request cap) until the full `row_count` is read.
+yields one dict per report row. It requests the GA4 maximum of 250,000 rows per
+page, then continues until it reads the full `row_count`.
 
 ## Why this dlt setup
 
@@ -65,24 +65,24 @@ The important default is the load format. For MotherDuck, prefer Parquet loader
 files over row-wise `insert_values`, so larger sources stay on a bulk-loading
 path. The Flight makes that choice explicit with `loader_file_format="parquet"`.
 
-The second important default is **`merge` on the dimension columns over a moving
-lookback window**. GA4 keeps revising recent days as attribution and conversion
-windows settle (often for 48 hours to two weeks). Re-pulling `7daysAgo`→`yesterday`
-on every run and merging on the dimension columns means a recent day's row gets
-*corrected* on later runs instead of frozen wrong (`append` would double-count,
-`replace` would discard history).
+The second important default is **a date-partition merge over a moving lookback
+window**. GA4 keeps revising recent days as attribution and conversion windows
+settle. Re-pulling `7daysAgo`→`yesterday` replaces each returned date partition.
+For each returned date, that corrects changed rows and removes rows that
+disappear from a revised report.
+`append` would double-count, while `replace` would discard history.
 
 ## Adapt the pattern
 
 - Set `GA4_PROPERTY_ID` to your numeric GA4 property id.
-- Choose your grain with `GA4_DIMENSIONS` and `GA4_METRICS`. The dimension list
-  is effectively the table's grain and the default merge key, so plan it up front
-  — adding a dimension later changes the key.
+- Choose your grain with `GA4_DIMENSIONS` and `GA4_METRICS`. Keep `date` in
+  `GA4_DIMENSIONS` when using the default merge mode. The dimension list is the
+  primary key, so adding a dimension later changes the table grain.
 - Tune the lookback with `GA4_START_DATE` / `GA4_END_DATE`. GA4 accepts relative
   strings (`7daysAgo`, `yesterday`, `today`) as well as `YYYY-MM-DD`.
-- Use `WRITE_DISPOSITION=merge` with the dimension columns as `PRIMARY_KEY`
-  (default) for self-healing reports; `replace` if you re-pull the full range
-  each run; `append` only if you truly want an immutable log of pulls.
+- Use `WRITE_DISPOSITION=merge` with `date` plus the other dimension columns as
+  `PRIMARY_KEY` for date-partition replacement. Use `replace` if you re-pull the
+  full range each run, or `append` only for an immutable pull log.
 - Keep `loader_file_format="parquet"` unless you have measured a reason to change
   it. See the [dlt MotherDuck destination docs](https://dlthub.com/docs/dlt-ecosystem/destinations/motherduck).
 
@@ -92,7 +92,8 @@ on every run and merging on the dimension columns means a recent day's row gets
 - What **lookback window** matches how late your GA4 data settles?
 - Target MotherDuck database and dataset (`DESTINATION_DATABASE`, `DATASET_NAME`);
   is letting the Flight create the database acceptable?
-- Load behavior: `merge` on the dimensions (default), `replace`, or `append`?
+- Load behavior: date-partition `merge` with dimensions as the row key
+  (default), `replace`, or `append`?
 - Which service account token, and is the GA4 service-account key stored as a
   Flights secret (not config)?
 - What schedule (cron) should it run on?
@@ -113,15 +114,14 @@ on every run and merging on the dimension columns means a recent day's row gets
 - **dlt does not create the database.** It creates the dataset (schema) and
   tables, so the Flight pre-creates `DESTINATION_DATABASE` with
   `CREATE DATABASE IF NOT EXISTS`.
-- **`merge` needs a primary key.** With `WRITE_DISPOSITION=merge`, `PRIMARY_KEY`
-  defaults to the dimension columns; keep it aligned with your grain or switch to
-  `append`/`replace`.
+- **`merge` needs `date` and a primary key.** With `WRITE_DISPOSITION=merge`,
+  `GA4_DIMENSIONS` must include `date` so the Flight can replace each returned
+  date partition. `PRIMARY_KEY` defaults to the dimension columns. Keep it
+  aligned with your grain or switch to `append`/`replace`.
 - **Keep source credentials out of config.** The GA4 service-account key is a
-  secret. Add it as a MotherDuck **Flights secret** named `GA4_SERVICE_ACCOUNT_JSON`
-  (the simplest way is the MotherDuck UI at
-  [Settings > Secrets](https://app.motherduck.com/settings/secrets), or
-  `CREATE SECRET ... (TYPE flights, ...)` from the DuckDB client), which the
-  runtime injects as an env var you read with `os.environ`.
+  secret. Add a `GA4_SERVICE_ACCOUNT_JSON` parameter to a MotherDuck **Flights
+  secret**, then attach that secret to the Flight through `flight_secret_names`.
+  The Flight reads the attached, prefixed environment variable.
 - **Keep the token out of config.** The runtime attaches a MotherDuck token and
   injects it as `MOTHERDUCK_TOKEN`; never place a token in `config`.
 
@@ -134,15 +134,15 @@ function.
 | Config key | Default | Purpose |
 |---|---|---|
 | `GA4_PROPERTY_ID` | (required) | Numeric GA4 property id, e.g. `123456789`. Validated as digits. |
-| `GA4_DIMENSIONS` | `date,sessionDefaultChannelGroup` | Comma-separated GA4 dimension API names. Defines the grain and default merge key. |
-| `GA4_METRICS` | `sessions,totalUsers,screenPageViews` | Comma-separated GA4 metric API names. Loaded as numbers. |
+| `GA4_DIMENSIONS` | `date,sessionDefaultChannelGroup` | Comma-separated GA4 dimension API names. Defines the grain. Must include `date` in merge mode. |
+| `GA4_METRICS` | `sessions,totalUsers,screenPageViews` | Comma-separated GA4 metric API names. The Flight preserves integer and currency values, and loads other metric types as doubles. |
 | `GA4_START_DATE` | `7daysAgo` | Report start date. Relative (`NdaysAgo`, `yesterday`, `today`) or `YYYY-MM-DD`. |
 | `GA4_END_DATE` | `yesterday` | Report end date. Same formats as `GA4_START_DATE`. |
 | `DESTINATION_DATABASE` | `ga4_ingest` | MotherDuck database dlt loads into. Created if missing. Validated as a SQL identifier. |
 | `DATASET_NAME` | `ga4` | dlt dataset (schema) that holds the loaded tables. |
 | `TABLE_NAME` | `ga4_report` | dlt table name for the loaded rows. |
-| `WRITE_DISPOSITION` | `merge` | `merge` (default; merges on `PRIMARY_KEY`), `append`, or `replace`. |
-| `PRIMARY_KEY` | `GA4_DIMENSIONS` | Merge key when `WRITE_DISPOSITION=merge`. Defaults to the dimension columns. |
+| `WRITE_DISPOSITION` | `merge` | `merge` (default; replaces returned date partitions), `append`, or `replace`. |
+| `PRIMARY_KEY` | `GA4_DIMENSIONS` | Row key in merge mode. Defaults to the dimension columns. |
 | `PIPELINE_NAME` | `ga4_dlt_ingest` | dlt pipeline name (also used for dlt state). |
 | `RUN_LEDGER_TABLE` | `dlt_ingest_runs` | Audit table in the database's `main` schema. Validated as a SQL identifier. |
 | `GA4_SERVICE_ACCOUNT_JSON` | (Flights secret) | Service-account key JSON. Store as a Flights **secret**, never in config. |
@@ -182,13 +182,17 @@ checked in; adapt the arguments to your situation), passing:
 - `name`: a Flight name, for example `ga4_dlt_ingest`
 - `source_code`: the contents of [`flight.py`](flight.py)
 - `requirements_txt`: the contents of [`requirements.txt`](requirements.txt)
+- `flight_secret_names`: `["ga4_creds"]` so the `GA4_SERVICE_ACCOUNT_JSON`
+  parameter is injected as `ga4_creds_GA4_SERVICE_ACCOUNT_JSON`
 - `config`: the keys from [What you'll adjust](#what-youll-adjust) you want to
   override (at minimum `GA4_PROPERTY_ID`; omit any you are keeping at default)
 
-Before the first run, add the `GA4_SERVICE_ACCOUNT_JSON` Flights secret (UI:
-[Settings > Secrets](https://app.motherduck.com/settings/secrets), or
-`CREATE SECRET ... (TYPE flights, ...)`), and select a MotherDuck token on the
-Flight (injected at run time as `MOTHERDUCK_TOKEN`).
+Before the first run, create the `ga4_creds` Flights secret with a
+`GA4_SERVICE_ACCOUNT_JSON` parameter. You can create it in
+[Settings > Secrets](https://app.motherduck.com/settings/secrets) or with
+`CREATE SECRET ... (TYPE flights, ...)`. Then attach it through
+`flight_secret_names` and select a MotherDuck token. The runtime injects the
+token as `MOTHERDUCK_TOKEN`.
 
 Create the Flight without a schedule first, trigger one manual run with
 `MD_RUN_FLIGHT(flight_id := ...)` (the id is returned by `MD_CREATE_FLIGHT` and
@@ -206,9 +210,9 @@ Flight version.
   `GA4_PROPERTY_ID` is validated as digits.
 - **Parameterized data.** The ledger row (pipeline name, dataset, table, and load
   summary) is written with bound parameters, never string-formatted into SQL.
-- **Secret handling.** The GA4 service-account key is read from the
-  `GA4_SERVICE_ACCOUNT_JSON` env var supplied by a Flights secret; it is never
-  written to disk by the Flight or placed in config.
+- **Secret handling.** The GA4 service-account key is read from a prefixed
+  environment variable supplied by an attached Flights secret, or the unprefixed
+  local value during development. It is never written to disk or placed in config.
 
 ## Learn more
 
@@ -219,8 +223,9 @@ Flight version.
 - GA4 Data API dimensions and metrics:
   [GA4 Dimensions & Metrics reference](https://developers.google.com/analytics/devguides/reporting/data/v1/api-schema).
 - The base template this adapts: [flight-dlt-ingest](../flight-dlt-ingest).
-- For raw event-level GA4 data: [flight-bigquery-ingest](../flight-bigquery-ingest)
-  via the GA4 → BigQuery export.
+- For raw event-level GA4 data:
+  [the GA4 BigQuery Flight](../flight-ga4-bigquery-ingest/) via the GA4 →
+  BigQuery export.
 - Files in this template: [`flight.py`](flight.py) (the single-file Flight source)
   and [`requirements.txt`](requirements.txt) (`duckdb`, `dlt[motherduck]`,
   `google-analytics-data`).
