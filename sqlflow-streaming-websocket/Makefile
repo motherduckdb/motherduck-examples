@@ -1,4 +1,4 @@
-IMAGE ?= turbolytics/sql-flow:v1.0.6
+IMAGE ?= turbolytics/sql-flow:v1.1.0
 MSGS  ?= 2000
 
 .PHONY: run stream validate clean
