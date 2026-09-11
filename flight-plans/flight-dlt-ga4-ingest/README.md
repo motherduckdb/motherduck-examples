@@ -11,6 +11,13 @@ type: template
 category: ingestion
 features: [flights]
 tags: [dlt, ingest]
+prompt: >-
+  I want scheduled GA4 reporting data in MotherDuck without hand-writing API
+  calls or INSERTs. Help me adapt the "Ingest Google Analytics 4 into
+  MotherDuck with dlt as a Flight" recipe to my own data and use case, using
+  it as a guide:
+  https://motherduck.com/docs/cookbook/flight-dlt-ga4-ingest
+published_date: 2026-06-16
 ---
 
 # Ingest Google Analytics 4 into MotherDuck with dlt as a Flight
