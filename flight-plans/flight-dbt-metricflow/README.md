@@ -12,18 +12,20 @@ type: template
 category: analytics
 features: [flights]
 tags: [dbt, metricflow]
+prompt: >-
+  I want to query metrics from a dbt MetricFlow semantic model on MotherDuck and
+  store scheduled results. Help me adapt the "Query dbt MetricFlow Metrics as a
+  Flight" recipe to my own data and use case, using it as a guide:
+  https://motherduck.com/docs/cookbook/flight-dbt-metricflow
+published_date: 2026-06-16
 ---
 
 # Query dbt MetricFlow Metrics as a Flight
 
 A single-file Flight that builds a [dbt MetricFlow](https://docs.getdbt.com/docs/build/about-metricflow)
-semantic model on MotherDuck and queries it — downloading the dbt project as a
-GitHub archive **over HTTPS at run time** (no git binary needed) and choosing the
-metric, grouping, and date window **per run through Flight config**. Point
-`GIT_REPO`/`GIT_REF` at your own dbt repo to query your own model (public, or
-private via a Flights secret); one deployed Flight then answers many metric
-questions by overriding config
-when you trigger a run, no redeploy. Each run appends its result to a snapshot
+semantic model on MotherDuck and queries it. It downloads a pinned dbt project as
+a GitHub archive over HTTPS at run time. Flight config chooses the metric,
+grouping, and date window for each run. Each run appends its result to a snapshot
 table, so a scheduled Flight builds a queryable time series of metric values.
 
 This is the Flight counterpart to the local [dbt-metricflow](../../dbt-metricflow)
@@ -38,19 +40,21 @@ binary**. Embedding a copy of the dbt project would drift from the canonical
 example, so `flight.py` **downloads the project over HTTPS at run time** (stdlib
 only — no clone) and shells out to the `dbt` and `mf` CLIs against it:
 
-1. Read config from the environment (Flight `config` keys arrive as env vars).
+1. Read the query settings from the environment. Flight `config` keys arrive as
+   environment variables.
 2. Connect to MotherDuck (`md:`) and `CREATE DATABASE IF NOT EXISTS` the target.
-3. Download `GIT_REPO`@`GIT_REF` as a gzip archive into a temp dir and extract it.
+3. Download the pinned repository commit as a gzip archive into a temp directory
+   and extract it.
    Public vs private is decided at run time: with no `GIT_TOKEN` secret it uses the
    public `…/archive/<ref>.tar.gz` endpoint; with one it uses the authenticated
    GitHub API tarball endpoint (`api.github.com/repos/<owner>/<repo>/tarball/<ref>`).
 4. Discover the dbt project (`dbt_project.yml`) and the profile (`profiles.yml`)
    in the checkout by globbing, so any layout works.
-5. Produce the semantic manifest `mf query` needs. With `BUILD_MODELS=true`
-   (default) the Flight owns the build — `dbt seed` + `dbt run --target motherduck`
-   materialize the tables. With `BUILD_MODELS=false` it runs `dbt parse` only —
-   read-only, no warehouse writes — and expects a separate dbt job to have built
-   the tables (see [When a separate dbt job owns the build](#when-a-separate-dbt-job-owns-the-build)).
+5. Produce the semantic manifest `mf query` needs. With `BUILD_MODELS = True`
+   (default) the Flight owns the build. `dbt seed` and `dbt run --target
+   motherduck` materialize the tables. With `BUILD_MODELS = False`, the Flight
+   runs `dbt parse` and expects a separate dbt job to have built the tables. The
+   Flight still creates its target database if needed and appends query results.
    The fetched project's own `profiles.yml` is used as-is; its MotherDuck path
    reads the database name from `MD_DATABASE` via dbt's `env_var()`, so nothing is
    written from scratch.
@@ -58,8 +62,8 @@ only — no clone) and shells out to the `dbt` and `mf` CLIs against it:
 7. Append each result row to the snapshot table, tagged with `run_at` and config.
 
 ```
-config (env) ── download archive ── dbt seed/run ── mf query ── snapshot table
-  override per run   GIT_REPO@GIT_REF    build on MotherDuck     append, JSON, run_at
+query config ── download pinned archive ── dbt seed/run ── mf query ── snapshot table
+per-run values       fixed source commit      build on MotherDuck     append, JSON, run_at
 ```
 
 ### The config-override pattern
@@ -78,8 +82,7 @@ FROM MD_CREATE_FLIGHT(
     'METRICS': 'revenue,orders,customers',
     'GROUP_BY': 'metric_time__month',
     'START_DATE': '2024-01-01',
-    'END_DATE': '2024-12-31',
-    'MD_DATABASE': 'ecommerce_metrics_flight'
+    'END_DATE': '2024-12-31'
   }
 );
 
@@ -118,12 +121,13 @@ one table, each tagged with the config that produced it.
 
 ### Querying your own model
 
-The default `GIT_REPO`/`GIT_REF`/`REPO_SUBDIR` point at this cookbook's
-[dbt-metricflow](../../dbt-metricflow) example so a fresh deploy runs end to end.
-To query your own metrics, point these at your dbt repo. Your project needs a
-`profiles.yml` with a `motherduck` target whose path resolves the database — the
-example uses `path: "md:{{ env_var('MD_DATABASE', 'ecommerce_test_db') }}"`, which
-the Flight feeds through `MD_DATABASE`. No code in `flight.py` changes.
+`PROJECT_REPO`, `PROJECT_REF`, and `PROJECT_SUBDIR` in `flight.py` point at this
+cookbook's [dbt-metricflow](../../dbt-metricflow) example. `PROJECT_REF` is an
+immutable commit SHA. To query your own metrics, change those constants and deploy
+a new Flight version. Your project needs a `profiles.yml` with a `motherduck`
+target whose path resolves the database. The example uses `path: "md:{{
+env_var('MD_DATABASE', 'ecommerce_test_db') }}"`, which the Flight sets from its
+`MD_DATABASE` constant.
 
 ### When a separate dbt job owns the build
 
@@ -132,14 +136,14 @@ the Flight feeds through `MD_DATABASE`. No code in `flight.py` changes.
 warehouse. Only the manifest must be produced by this Flight — the tables just
 have to exist. `dbt seed`/`dbt run` materialize them, but so does any other job.
 
-If a separate dbt job already builds the models into MotherDuck (a dbt Cloud job,
-Airflow, another Flight), set `BUILD_MODELS=false`. The Flight then runs **`dbt
-parse` only** — which writes the manifest locally and touches the warehouse not at
-all — and `mf query` reads the tables your dbt job built. This avoids rebuilding
-the models every run, avoids clobbering your real fact tables with the demo seed,
-and makes runs **read-only**, so any number can run concurrently without the
-write-write conflicts that shared-table rebuilds cause. Point `GIT_REPO`/`GIT_REF`
-at the same repo your dbt job uses, so the semantic definitions match the tables.
+If a separate dbt job already builds the models into MotherDuck, set
+`BUILD_MODELS = False` in `flight.py` and deploy a new version. The Flight then
+runs `dbt parse` to create the manifest locally, and `mf query` reads the tables
+that the other job built. This avoids rebuilding the models and avoids replacing
+real fact tables with the demo seed. It does not make the Flight read-only. The
+Flight can create the target database and always appends query results to its
+snapshot table. Point `PROJECT_REPO` and `PROJECT_REF` at the same project version
+as the dbt job so the semantic definitions match the tables.
 
 ### Private repositories
 
@@ -162,8 +166,7 @@ token in an `Authorization` header (never in the URL, so it stays out of the log
 
 ## Questions to answer
 
-- Which git repo, ref, and subdirectory hold the dbt project (your fork, or the
-  default example)?
+- Which repository commit and subdirectory hold the dbt project?
 - Which metrics matter, and what dimension and date window should each run query?
 - Which target database should hold the built models and the snapshot table?
 - Will runs vary the metric per trigger (config override), run on a fixed
@@ -180,22 +183,19 @@ token in an `Authorization` header (never in the URL, so it stays out of the log
   `…/archive/<ref>.tar.gz` URL 404s on a private repo. Store a token in a `TYPE
   flights` secret (see [Private repositories](#private-repositories)); the Flight
   then uses the authenticated API endpoint.
-- **`GIT_REF` accepts a branch, tag, or commit SHA.** Both the public and
-  authenticated archive endpoints resolve any of the three. Pin to a tag or SHA
-  for reproducible runs.
 - **Override changes values, not keys.** A per-run `config` override only sets new
-  values for keys that already exist on the Flight. The defaults include every key
-  below; set the value you want.
+  values for keys that already exist on the Flight. This template exposes only
+  query settings through config.
 - **Time-dimension queries are bounded by the spine.** The example spine generates
   `2024-01-01` to `2025-12-31`. `START_DATE`/`END_DATE` outside that window, or
   grouping by `metric_time__*` beyond it, returns no rows. Widen the spine in your
   project.
 - **The build runs every time, and concurrent builds conflict.** With
-  `BUILD_MODELS=true`, each run does `dbt seed` + `dbt run` against the same
+  `BUILD_MODELS = True`, each run does `dbt seed` + `dbt run` against the same
   database, so a large project is slower and **parallel runs collide** on the
   shared tables (MotherDuck rejects the losers with a write-write conflict). For
-  fan-out or when a separate job owns the build, set `BUILD_MODELS=false` to run
-  `dbt parse` only — read-only and parallel-safe (see
+  a separate dbt job, set `BUILD_MODELS = False` to run `dbt parse` before the
+  query (see
   [When a separate dbt job owns the build](#when-a-separate-dbt-job-owns-the-build)).
 - **Derived metrics reference metric names, not measures.** `revenue_per_customer`
   is `revenue / customers`, both metrics. A raw measure name in a derived `expr`
@@ -205,27 +205,21 @@ token in an `Authorization` header (never in the URL, so it stays out of the log
 
 ## What you'll adjust
 
-Every knob is a config/env value read by `read_config()` at the top of
-`flight.py`; set them as Flight config rather than by editing code. The semantic
-model itself lives in the git repo you point the Flight at, not in `flight.py`.
+`read_config()` reads only the query settings. Set those settings as Flight config
+and override them with `MD_RUN_FLIGHT`. Change the source, destination, or build
+mode constants in `flight.py`, then deploy a new Flight version.
 
 | Config key | Default | Purpose |
 |---|---|---|
-| `GIT_REPO` | `…/motherduck-cookbook.git` | GitHub repo holding the dbt project. Point at your fork. |
-| `GIT_REF` | `main` | Branch, tag, or commit SHA to download as an archive. |
-| `REPO_SUBDIR` | `dbt-metricflow` | Path within the repo to run from (extracted from the archive). |
-| `BUILD_MODELS` | `true` | `true`: `dbt seed` + `dbt run` build the tables. `false`: `dbt parse` only (read-only, parallel-safe) when a separate dbt job owns the build. |
 | `METRICS` | `revenue,orders,customers` | Comma-separated metric(s) `mf query` computes. Override per run. |
 | `GROUP_BY` | `metric_time__month` | Dimension(s) to slice by, e.g. `metric_time__day`, `order_id__status`. |
 | `START_DATE` | `2024-01-01` | `mf query --start-time`; must fall inside the time spine. |
 | `END_DATE` | `2024-12-31` | `mf query --end-time`; must fall inside the time spine. |
-| `MD_DATABASE` | `ecommerce_metrics_flight` | Target database; fed to the project's `profiles.yml` `env_var()`. Created if missing. |
-| `SNAPSHOT_TABLE` | `metric_snapshots` | Append-only table of results (`run_at`, config, `result` JSON). |
-| `MOTHERDUCK_TOKEN` | (Flight-injected) | Auth. Never put it in config. |
 
-`GIT_TOKEN` is **not** a config key — it is a secret. Store it in a `TYPE flights`
-secret (see [Private repositories](#private-repositories)) so it never lands in the
-Flight's `config` MAP or the logs. Public repos need no token at all.
+`PROJECT_REPO`, `PROJECT_REF`, `PROJECT_SUBDIR`, `BUILD_MODELS`, `MD_DATABASE`,
+and `SNAPSHOT_TABLE` are constants in `flight.py`. `GIT_TOKEN` is a secret, not a
+config key. Store it in a `TYPE flights` secret (see [Private repositories](#private-repositories))
+so it never lands in the Flight's `config` map or logs.
 
 ## Run it
 
@@ -240,14 +234,13 @@ export MOTHERDUCK_TOKEN=your_token_here
 uv run --with-requirements requirements.txt flight.py
 ```
 
-Override any default inline, for example a different metric and your own repo. For
-a private repo, set `GIT_TOKEN` as a bare env var locally (deployed, it comes from
-the Flights secret instead):
+Override a query setting inline. To use another dbt project, change the
+`PROJECT_*` constants and deploy a new Flight version. For a private repository,
+set `GIT_TOKEN` as a bare environment variable locally. A deployed Flight reads it
+from a Flights secret.
 
 ```bash
 METRICS=revenue_per_customer GROUP_BY=metric_time__month \
-GIT_REPO=https://github.com/you/your-dbt-repo.git GIT_REF=main REPO_SUBDIR=analytics \
-GIT_TOKEN=github_pat_... \
   uv run --with-requirements requirements.txt flight.py
 ```
 
@@ -259,8 +252,7 @@ arguments), passing:
 - `name`: a Flight name, for example `dbt_metricflow`
 - `source_code`: the contents of [`flight.py`](flight.py)
 - `requirements_txt`: the contents of [`requirements.txt`](requirements.txt)
-- `config`: `GIT_REPO`/`GIT_REF`/`REPO_SUBDIR` for your project, plus `METRICS`,
-  `GROUP_BY`, `START_DATE`, `END_DATE`, `MD_DATABASE`
+- `config`: `METRICS`, `GROUP_BY`, `START_DATE`, and `END_DATE`
 
 A MotherDuck token is attached automatically and injected at run time as
 `MOTHERDUCK_TOKEN`; no token argument is needed. For a private dbt repo, also
@@ -283,9 +275,9 @@ updates are metadata-only and do not create a new version.
   before any SQL runs.
 - **Parameterized data.** The snapshot row (metrics, grouping, dates, and the
   result JSON) is written with bound parameters, never string-formatted into SQL.
-- **Fetch a trusted ref.** The Flight runs whatever code the fetched ref contains.
-  Point `GIT_REPO`/`GIT_REF` at a repo and branch/tag you control; pin a tag for
-  reproducibility.
+- **Pinned source.** The Flight downloads the repository commit in
+  `PROJECT_REF`. Per-run config cannot change the code it downloads. Change a
+  `PROJECT_*` constant and deploy a new version to adopt another source.
 - **Token in a secret, in the header.** A private repo's `GIT_TOKEN` belongs in a
   `TYPE flights` secret, never in `config` (which is logged and stored on the
   Flight). At run time the token is sent in the `Authorization` header of the

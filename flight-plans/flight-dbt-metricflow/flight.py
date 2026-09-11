@@ -4,10 +4,11 @@ A Flight runs as a single ``main.py`` in a fresh, torn-down container with no gi
 binary. Rather than embed a copy of the dbt project (which would drift from the
 canonical example), this Flight **downloads the dbt + MetricFlow project as a
 GitHub archive at run time** (stdlib only — no clone) and runs the ``dbt`` and
-``mf`` CLIs against it. Point ``GIT_REPO``/``GIT_REF`` at your own dbt repo to
-query your own semantic model; for a private repo, store a token in a MotherDuck
-``TYPE flights`` secret (param ``GIT_TOKEN``) and the authenticated GitHub API
-archive endpoint is used instead. The engine here never changes.
+``mf`` CLIs against it. The source repository, commit, and subdirectory are
+constants in this file. To query your own semantic model, change those constants
+and deploy a new Flight version. For a private repo, store a token in a
+MotherDuck ``TYPE flights`` secret (param ``GIT_TOKEN``) and the authenticated
+GitHub API archive endpoint is used instead.
 
 The metric, grouping, and date window are chosen **per run through Flight config**.
 A Flight's ``config`` MAP is injected as environment variables; override it per run
@@ -15,9 +16,8 @@ with ``MD_RUN_FLIGHT(flight_id := '…', config := MAP {...})`` and the same pro
 answers a different metric question — no redeploy. (Override changes *values* of
 keys that already exist on the Flight; it cannot add new keys.)
 
-The fetched project's own ``profiles.yml`` is used as-is; nothing is written from
-scratch. Its MotherDuck target reads the database name from ``MD_DATABASE`` via
-dbt's ``env_var()``, so the same committed profile serves every target database.
+The fetched project's own ``profiles.yml`` is used as-is. Its MotherDuck target
+reads the database name from ``MD_DATABASE`` via dbt's ``env_var()``.
 
 Each run appends the ``mf query`` result to a snapshot table as a ``JSON`` column,
 because the output columns change with the metric/group-by chosen; JSON keeps one
@@ -41,53 +41,45 @@ import duckdb
 log = logging.getLogger("dbt_metricflow")
 
 
-# ===========================================================================
-# Config — every value is overridable per run via the Flight `config` MAP.
-# ===========================================================================
+# Constants that define the deployed Flight. Change these values and deploy a new
+# version to use another project, database, snapshot table, or build mode.
+PROJECT_REPO = "https://github.com/motherduckdb/motherduck-cookbook.git"
+PROJECT_REF = "f6c41cc9d709f7b9b2116f16254ff0d08af30a21"
+PROJECT_SUBDIR = "dbt-metricflow"
+BUILD_MODELS = True
+MD_DATABASE = "ecommerce_metrics_flight"
+SNAPSHOT_TABLE = "metric_snapshots"
+
+
 def read_config() -> dict[str, str]:
-    """Read run config from the environment. Flight `config` keys arrive here as
-    env vars; `MD_RUN_FLIGHT(config := MAP {...})` overrides the stored defaults
-    for a single run."""
+    """Read query settings from the environment.
+
+    Flight ``config`` keys arrive as environment variables. ``MD_RUN_FLIGHT`` can
+    override these settings for one run without changing the deployed source.
+    """
     return {
-        # Where the dbt project lives. Point these at your own fork to run your
-        # own models; the default is this cookbook's dbt-metricflow example.
-        "GIT_REPO": os.environ.get(
-            "GIT_REPO", "https://github.com/motherduckdb/motherduck-cookbook.git"
-        ),
-        "GIT_REF": os.environ.get("GIT_REF", "main"),  # branch or tag
-        "REPO_SUBDIR": os.environ.get("REPO_SUBDIR", "dbt-metricflow"),
-        # Whether this Flight builds the models. "true" (default) runs
-        # `dbt seed` + `dbt run` so the demo is self-contained. Set "false" when a
-        # separate dbt job already builds the tables: the Flight then only runs
-        # `dbt parse` (read-only — no warehouse writes, so parallel runs never
-        # conflict) and queries the existing tables.
-        "BUILD_MODELS": os.environ.get("BUILD_MODELS", "true"),
-        # What to query — the per-run knobs.
         "METRICS": os.environ.get("METRICS", "revenue,orders,customers"),
         "GROUP_BY": os.environ.get("GROUP_BY", "metric_time__month"),
         "START_DATE": os.environ.get("START_DATE", "2024-01-01"),
         "END_DATE": os.environ.get("END_DATE", "2024-12-31"),
-        # Where results land.
-        "MD_DATABASE": os.environ.get("MD_DATABASE", "ecommerce_metrics_flight"),
-        "SNAPSHOT_TABLE": os.environ.get("SNAPSHOT_TABLE", "metric_snapshots"),
     }
 
 
 # ---------------------------------------------------------------------------
 # Fetch the dbt project as a GitHub archive over HTTPS (no git, stdlib only)
 # ---------------------------------------------------------------------------
-def fetch_project(cfg: dict[str, str], dest: Path) -> Path:
-    """Materialize ``REPO_SUBDIR`` of the repo under ``dest`` and return the path
+def fetch_project(dest: Path) -> Path:
+    """Materialize ``PROJECT_SUBDIR`` of the repo under ``dest`` and return the path
     to that subdirectory. The Flight container ships no git, so we never clone —
     we download the repo as a gzip archive with the stdlib and extract it. Public
     vs private is chosen at run time by whether a ``GIT_TOKEN`` secret resolves."""
     token = resolve_secret("GIT_TOKEN")
-    url, headers = _archive_request(cfg, token)
+    url, headers = _archive_request(token)
     checkout = _download_and_extract(url, headers, dest)
-    return _locate_subdir(checkout, cfg["REPO_SUBDIR"])
+    return _locate_subdir(checkout, PROJECT_SUBDIR)
 
 
-def _archive_request(cfg: dict[str, str], token: str) -> tuple[str, dict[str, str]]:
+def _archive_request(token: str) -> tuple[str, dict[str, str]]:
     """Build the archive URL and headers, deciding public vs private at run time.
 
     Public  -> ``github.com/<owner>/<repo>/archive/<ref>.tar.gz`` (no auth).
@@ -95,8 +87,8 @@ def _archive_request(cfg: dict[str, str], token: str) -> tuple[str, dict[str, st
     token, which 302-redirects to a short-lived signed download URL. Both accept a
     branch, tag, or commit SHA as ``<ref>``. The token rides in the Authorization
     header — never the URL — so it cannot leak into the Flight logs."""
-    base = cfg["GIT_REPO"].removesuffix(".git")
-    ref = cfg["GIT_REF"]
+    base = PROJECT_REPO.removesuffix(".git")
+    ref = PROJECT_REF
     if token:
         owner_repo = base.removeprefix("https://github.com/")
         log.info("fetching private repo %s @ %s", owner_repo, ref)
@@ -157,7 +149,7 @@ def _locate_subdir(checkout: Path, repo_subdir: str) -> Path:
 
 
 def discover(subdir: Path) -> tuple[Path, Path]:
-    """Within the fetched ``REPO_SUBDIR``, locate the dbt project dir (holds
+    """Within the fetched ``PROJECT_SUBDIR``, locate the dbt project dir (holds
     ``dbt_project.yml``) and the profiles dir (the nearest ancestor holding
     ``profiles.yml``). Scoping to ``subdir`` keeps it from matching a sibling
     project elsewhere in the repo (the archive contains the whole repo)."""
@@ -196,20 +188,15 @@ def run_cmd(cmd: list[str], cwd: Path | str, env: dict[str, str]) -> None:
         raise SystemExit(f"command failed ({proc.returncode}): {' '.join(cmd)}")
 
 
-def _truthy(value: str) -> bool:
-    """Parse a config string as a boolean (Flight config values are always strings)."""
-    return value.strip().lower() in ("1", "true", "yes", "on")
-
-
-def prepare_project(cfg: dict[str, str], dbt: str, project_dir: Path, env: dict[str, str]) -> None:
+def prepare_project(dbt: str, project_dir: Path, env: dict[str, str]) -> None:
     """Produce the ``target/semantic_manifest.json`` that ``mf query`` requires.
 
     ``mf`` reads that manifest and raises if it is missing — but any dbt command
     that compiles the project writes it. When ``BUILD_MODELS`` is true the Flight
     owns the build (``dbt seed`` + ``dbt run`` materialize the tables); when false
-    a separate dbt job owns the tables, so the Flight only runs ``dbt parse`` —
-    read-only, no warehouse writes, so concurrent runs never conflict."""
-    if _truthy(cfg["BUILD_MODELS"]):
+    a separate dbt job owns the tables, so the Flight only runs ``dbt parse``.
+    The Flight still writes its snapshot after the query."""
+    if BUILD_MODELS:
         run_cmd([dbt, "seed", "--target", "motherduck"], project_dir, env)
         run_cmd([dbt, "run", "--target", "motherduck"], project_dir, env)
     else:
@@ -231,8 +218,8 @@ def append_snapshot(con: duckdb.DuckDBPyConnection, cfg: dict[str, str], csv_pat
     The aliased subquery (``r``) resolves to a STRUCT of the whole row, which
     ``to_json`` serializes — so the table holds any metric/group-by combination
     without a schema change."""
-    db = _ident(cfg["MD_DATABASE"])
-    table = _ident(cfg["SNAPSHOT_TABLE"])
+    db = _ident(MD_DATABASE)
+    table = _ident(SNAPSHOT_TABLE)
     con.execute(
         f"""
         CREATE TABLE IF NOT EXISTS {db}.{table} (
@@ -265,15 +252,15 @@ def main() -> None:
     # The Flight runtime injects MOTHERDUCK_TOKEN; dbt-duckdb and the CLIs read it
     # from the environment. Pass the whole environment through to subprocesses.
     env = dict(os.environ)
-    env["MD_DATABASE"] = cfg["MD_DATABASE"]  # consumed by the project's profiles.yml env_var()
+    env["MD_DATABASE"] = MD_DATABASE  # consumed by the project's profiles.yml env_var()
     env["DBT_TARGET"] = "motherduck"  # the `mf` CLI selects its target from this
 
     con = duckdb.connect("md:")
-    con.execute(f"CREATE DATABASE IF NOT EXISTS {_ident(cfg['MD_DATABASE'])}")
+    con.execute(f"CREATE DATABASE IF NOT EXISTS {_ident(MD_DATABASE)}")
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        subdir = fetch_project(cfg, root)
+        subdir = fetch_project(root)
         project_dir, profiles_dir = discover(subdir)
         log.info("project=%s profiles=%s", project_dir, profiles_dir)
         env["DBT_PROFILES_DIR"] = str(profiles_dir)
@@ -282,7 +269,7 @@ def main() -> None:
         env["HOME"] = str(root)
 
         dbt = _tool("dbt")
-        prepare_project(cfg, dbt, project_dir, env)
+        prepare_project(dbt, project_dir, env)
 
         csv_path = root / "mf_result.csv"
         run_cmd(
@@ -298,7 +285,7 @@ def main() -> None:
             raise SystemExit("mf query produced no CSV — check the metric/group-by names")
         rows = append_snapshot(con, cfg, csv_path)
 
-    log.info("appended %d row(s) to %s.%s", rows, cfg["MD_DATABASE"], cfg["SNAPSHOT_TABLE"])
+    log.info("appended %d row(s) to %s.%s", rows, MD_DATABASE, SNAPSHOT_TABLE)
 
 
 if __name__ == "__main__":

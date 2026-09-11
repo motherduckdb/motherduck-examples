@@ -8,8 +8,7 @@ ecommerce_metrics:
 
     motherduck:
       type: duckdb
-      # Database name defaults to ecommerce_test_db; override with the MD_DATABASE
-      # env var (the flight-dbt-metricflow Flight sets it from config).
+      # Database name defaults to ecommerce_test_db. Set MD_DATABASE to override it.
       path: "md:{{ env_var('MD_DATABASE', 'ecommerce_test_db') }}"
       threads: 4
       settings:
