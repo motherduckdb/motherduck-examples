@@ -162,7 +162,7 @@ def discover(subdir: Path) -> tuple[Path, Path]:
     matches = sorted(subdir.rglob("dbt_project.yml"))
     if not matches:
         raise SystemExit(f"no dbt_project.yml found under {subdir}")
-    project_dir = matches[0].parentdiscover
+    project_dir = matches[0].parent
     for candidate in (project_dir, *project_dir.parents):
         if (candidate / "profiles.yml").exists():
             return project_dir, candidate
