@@ -1,23 +1,17 @@
 """MotherDuck Flight: run a dbt project on a schedule, snapshotting run results.
 
 The Flights runtime preinstalls a ``git`` binary, so this Flight checks the dbt
-project out with git at run time — the git-clone sibling of
-flight-dbt-build-gh-archive, which predates preinstalled git and downloads a
-GitHub archive over HTTPS instead. A shallow fetch of ``GIT_REF`` (branch, tag, or commit SHA)
-materializes the repo, ``dbt build`` runs against MotherDuck, and dbt's own
-``run_results.json`` is appended to a snapshot table — one row per node per
-run, tagged with the exact commit SHA that was built.
+project out with git at run time. It pins the source in ``PROJECT_*`` constants,
+runs ``dbt build`` against MotherDuck, and appends dbt's own
+``run_results.json`` to a snapshot table tagged with the checked-out commit SHA.
+Change the source constants and deploy a new Flight version to use another
+project. A private source repository needs a MotherDuck ``TYPE flights`` secret
+with a ``GIT_TOKEN`` parameter. The token reaches git through ``GIT_ASKPASS`` and
+does not appear in an argv, URL, or log line.
 
-Point ``GIT_REPO``/``GIT_REF``/``REPO_SUBDIR`` at your own dbt repo; any git
-host that serves HTTPS works (GitHub, GitLab, Bitbucket, self-hosted). For a
-private repo, store a token in a MotherDuck ``TYPE flights`` secret (param
-``GIT_TOKEN``); it reaches git through ``GIT_ASKPASS``, so it never appears in
-an argv, a URL, or a log line.
-
-Every knob is chosen per run through Flight config, injected as environment
-variables; override with ``MD_RUN_FLIGHT(flight_id := '…', config := MAP {...})``
-without redeploying. ``RUN_MODE=build`` runs ``dbt build`` (seed+run+test);
-``RUN_MODE=test`` runs ``dbt test`` only, for when a separate job owns the build.
+Per-run Flight config controls the dbt run settings. ``RUN_MODE=build`` runs
+``dbt build``. ``RUN_MODE=test`` runs ``dbt test`` when another job owns the
+model build.
 """
 
 from __future__ import annotations
@@ -35,31 +29,19 @@ import duckdb
 log = logging.getLogger("dbt_build_git")
 
 
-# ===========================================================================
-# Config — every value is overridable per run via the Flight `config` MAP.
-# ===========================================================================
+# Change these constants and deploy a new Flight version to build another dbt
+# project. Per-run config cannot change the source that the Flight executes.
+PROJECT_REPO = "https://github.com/motherduckdb/motherduck-cookbook.git"
+PROJECT_REF = "fab5c08e7789109a4c621742c23b14a32880256a"
+PROJECT_SUBDIR = "dbt-churn-prediction"
+GIT_USERNAME = "x-access-token"
+
+
 def read_config() -> dict[str, str]:
     """Read run config from the environment. Flight `config` keys arrive here as
     env vars; `MD_RUN_FLIGHT(config := MAP {...})` overrides the stored defaults
     for a single run."""
     return {
-        # Where the dbt project lives. Point these at your own repo to run your
-        # own models; the default is this cookbook's dbt-churn-prediction example.
-        "GIT_REPO": os.environ.get(
-            "GIT_REPO", "https://github.com/motherduckdb/motherduck-cookbook.git"
-        ),
-
-        "GIT_REF": os.environ.get("GIT_REF", "main"),  # branch, tag, or commit SHA
-
-        # Username git authenticates with when a GIT_TOKEN secret resolves. A host
-        # convention, not a secret: GitHub PATs use "x-access-token", GitLab
-        # tokens use "oauth2". Ignored for public repos.
-        "GIT_USERNAME": os.environ.get("GIT_USERNAME", "x-access-token"),
-
-        # Path within the repo to the dbt project. Leave empty (or ".") when the
-        # repo is the dbt project — i.e. dbt_project.yml sits at the repo root.
-        "REPO_SUBDIR": os.environ.get("REPO_SUBDIR", "dbt-churn-prediction"),
-
         # How to run. "build" = dbt build (seed+run+test). "test" = dbt test only,
         # for when a separate job already built the tables.
         "RUN_MODE": os.environ.get("RUN_MODE", "build"),
@@ -88,8 +70,8 @@ def read_config() -> dict[str, str]:
 # ---------------------------------------------------------------------------
 # Check the dbt project out with git (the runtime preinstalls a git binary)
 # ---------------------------------------------------------------------------
-def fetch_project(cfg: dict[str, str], dest: Path, env: dict[str, str]) -> tuple[Path, str]:
-    """Check out ``GIT_REPO`` @ ``GIT_REF`` under ``dest`` and return the dbt
+def fetch_project(dest: Path, env: dict[str, str]) -> tuple[Path, str]:
+    """Check out ``PROJECT_REPO`` @ ``PROJECT_REF`` under ``dest`` and return the dbt
     project subdirectory plus the resolved commit SHA.
 
     init + fetch + checkout of FETCH_HEAD instead of ``git clone --branch``
@@ -99,18 +81,18 @@ def fetch_project(cfg: dict[str, str], dest: Path, env: dict[str, str]) -> tuple
     resolves."""
     git = _tool("git")
     env = dict(env, GIT_TERMINAL_PROMPT="0")  # fail fast; never prompt
-    url = cfg["GIT_REPO"]
+    url = PROJECT_REPO
     token = resolve_secret("GIT_TOKEN")
     if token:
-        url = _authenticated_url(url, cfg["GIT_USERNAME"])
+        url = _authenticated_url(url, GIT_USERNAME)
         env.update(_askpass_env(dest, token))
-    log.info("checking out %s repo %s @ %s", "private" if token else "public", url, cfg["GIT_REF"])
+    log.info("checking out %s repo %s @ %s", "private" if token else "public", url, PROJECT_REF)
 
     checkout = dest / "repo"
     run_cmd([git, "init", "-q", str(checkout)], dest, env)
     for args in (
         ["remote", "add", "origin", url],
-        ["fetch", "-q", "--depth", "1", "origin", cfg["GIT_REF"]],
+        ["fetch", "-q", "--depth", "1", "origin", PROJECT_REF],
         ["checkout", "-q", "--detach", "FETCH_HEAD"],
     ):
         run_cmd([git, "-C", str(checkout), *args], dest, env)
@@ -120,7 +102,7 @@ def fetch_project(cfg: dict[str, str], dest: Path, env: dict[str, str]) -> tuple
         env=env, capture_output=True, text=True, check=True,
     ).stdout.strip()
     log.info("checked out commit %s", sha)
-    return _locate_subdir(checkout, cfg["REPO_SUBDIR"]), sha
+    return _locate_subdir(checkout, PROJECT_SUBDIR), sha
 
 
 def _authenticated_url(url: str, username: str) -> str:
@@ -128,7 +110,7 @@ def _authenticated_url(url: str, username: str) -> str:
     then asks GIT_ASKPASS only for the password. The username is a host
     convention, not a secret, so it is safe in the logged argv."""
     if not url.startswith("https://"):
-        raise SystemExit("GIT_TOKEN auth requires an https:// GIT_REPO url")
+        raise SystemExit("GIT_TOKEN auth requires an https:// PROJECT_REPO URL")
     return f"https://{username}@{url.removeprefix('https://')}"
 
 
@@ -160,7 +142,7 @@ def resolve_secret(param: str) -> str:
 
 
 def _locate_subdir(checkout: Path, repo_subdir: str) -> Path:
-    """Resolve ``REPO_SUBDIR`` inside the checkout. Unlike a GitHub archive there
+    """Resolve ``PROJECT_SUBDIR`` inside the checkout. Unlike a GitHub archive there
     is no wrapper directory — the clone root is the repo root — so the subdir is
     an exact relative path; empty (or ".") means the repo itself is the project."""
     sub = repo_subdir.strip().strip("/")
@@ -173,7 +155,7 @@ def _locate_subdir(checkout: Path, repo_subdir: str) -> Path:
 
 
 def discover(subdir: Path) -> tuple[Path, Path]:
-    """Within ``REPO_SUBDIR``, locate the dbt project dir (holds
+    """Within ``PROJECT_SUBDIR``, locate the dbt project dir (holds
     ``dbt_project.yml``) and the profiles dir (the nearest ancestor holding
     ``profiles.yml``). Scoping to ``subdir`` keeps it from matching a sibling
     project elsewhere in the repo."""
@@ -302,7 +284,7 @@ def append_run_results(
             r.value
         FROM doc, json_each(doc.j, '$.results') AS r
         """,
-        [str(run_results_path), cfg["GIT_REPO"], cfg["GIT_REF"], git_sha, cfg["RUN_MODE"]],
+        [str(run_results_path), PROJECT_REPO, PROJECT_REF, git_sha, cfg["RUN_MODE"]],
     )
     return json.loads(run_results_path.read_text())["results"]
 
@@ -328,7 +310,7 @@ def main() -> None:
         # read-only, so point it at the writable temp dir before either runs.
         env["HOME"] = str(root)
 
-        subdir, git_sha = fetch_project(cfg, root, env)
+        subdir, git_sha = fetch_project(root, env)
         project_dir, profiles_dir = subdir
         log.info("project=%s profiles=%s", project_dir, profiles_dir)
         env["DBT_PROFILES_DIR"] = str(profiles_dir)

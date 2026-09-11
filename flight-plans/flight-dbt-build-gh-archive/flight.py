@@ -1,22 +1,15 @@
 """MotherDuck Flight: run a dbt project on a schedule, snapshotting run results.
 
 A Flight runs as a single ``flight.py`` in a fresh, torn-down container. This
-Flight downloads a dbt project as a GitHub archive at run time (stdlib only —
-no clone, no repo history), runs ``dbt build`` against it on MotherDuck, and
-appends dbt's own ``run_results.json`` to a snapshot table — one row per node per
-run. A scheduled Flight thus builds a queryable history of build and test health
-(per-model status, timing, test pass/fail) over time. The runtime also
-preinstalls ``git``; flight-dbt-build-git is the sibling template that clones
-instead — reach for it for non-GitHub hosts or per-commit provenance.
+Flight downloads a pinned dbt project as a GitHub archive at run time, runs
+``dbt build`` against it on MotherDuck, and appends dbt's own
+``run_results.json`` to a snapshot table. Change the ``PROJECT_*`` constants and
+deploy a new version to use another project. A private source repository needs a
+MotherDuck ``TYPE flights`` secret with a ``GIT_TOKEN`` parameter.
 
-Point ``GIT_REPO``/``GIT_REF``/``REPO_SUBDIR`` at your own dbt repo to run your own
-project; for a private repo, store a token in a MotherDuck ``TYPE flights`` secret
-(param ``GIT_TOKEN``) and the authenticated GitHub API archive endpoint is used.
-
-Every knob is chosen per run through Flight config, injected as environment
-variables; override with ``MD_RUN_FLIGHT(flight_id := '…', config := MAP {...})``
-without redeploying. ``RUN_MODE=build`` runs ``dbt build`` (seed+run+test);
-``RUN_MODE=test`` runs ``dbt test`` only, for when a separate job owns the build.
+Per-run Flight config controls the dbt run settings. ``RUN_MODE=build`` runs
+``dbt build``. ``RUN_MODE=test`` runs ``dbt test`` when another job owns the
+model build.
 """
 
 from __future__ import annotations
@@ -37,26 +30,18 @@ import duckdb
 log = logging.getLogger("dbt_build")
 
 
-# ===========================================================================
-# Config — every value is overridable per run via the Flight `config` MAP.
-# ===========================================================================
+# Change these constants and deploy a new Flight version to build another dbt
+# project. Per-run config cannot change the source that the Flight executes.
+PROJECT_REPO = "https://github.com/motherduckdb/motherduck-cookbook.git"
+PROJECT_REF = "fab5c08e7789109a4c621742c23b14a32880256a"
+PROJECT_SUBDIR = "dbt-churn-prediction"
+
+
 def read_config() -> dict[str, str]:
     """Read run config from the environment. Flight `config` keys arrive here as
     env vars; `MD_RUN_FLIGHT(config := MAP {...})` overrides the stored defaults
     for a single run."""
     return {
-        # Where the dbt project lives. Point these at your own fork to run your
-        # own models; the default is this cookbook's dbt-churn-prediction example.
-        "GIT_REPO": os.environ.get(
-            "GIT_REPO", "https://github.com/motherduckdb/motherduck-cookbook.git"
-        ),
-
-        "GIT_REF": os.environ.get("GIT_REF", "main"),  # branch, tag, or commit SHA
-
-        # Path within the repo to the dbt project. Leave empty (or ".") when the
-        # repo is the dbt project — i.e. dbt_project.yml sits at the repo root.
-        "REPO_SUBDIR": os.environ.get("REPO_SUBDIR", "dbt-churn-prediction"),
-
         # How to run. "build" = dbt build (seed+run+test). "test" = dbt test only,
         # for when a separate job already built the tables.
         "RUN_MODE": os.environ.get("RUN_MODE", "build"),
@@ -85,20 +70,20 @@ def read_config() -> dict[str, str]:
 # ---------------------------------------------------------------------------
 # Fetch the dbt project as a GitHub archive over HTTPS (no git, stdlib only)
 # ---------------------------------------------------------------------------
-def fetch_project(cfg: dict[str, str], dest: Path) -> Path:
-    """Materialize ``REPO_SUBDIR`` of the repo under ``dest`` and return the path
+def fetch_project(dest: Path) -> Path:
+    """Materialize ``PROJECT_SUBDIR`` of the repo under ``dest`` and return the path
     to that subdirectory. Downloads the repo as a gzip archive with the stdlib
     and extracts it — one HTTPS GET of exactly one tree, no history transfer (the
     runtime does ship git; the flight-dbt-build-git sibling clones instead).
     Public vs private is chosen at run time by whether a ``GIT_TOKEN`` secret
     resolves."""
     token = resolve_secret("GIT_TOKEN")
-    url, headers = _archive_request(cfg, token)
+    url, headers = _archive_request(token)
     checkout = _download_and_extract(url, headers, dest)
-    return _locate_subdir(checkout, cfg["REPO_SUBDIR"])
+    return _locate_subdir(checkout, PROJECT_SUBDIR)
 
 
-def _archive_request(cfg: dict[str, str], token: str) -> tuple[str, dict[str, str]]:
+def _archive_request(token: str) -> tuple[str, dict[str, str]]:
     """Build the archive URL and headers, deciding public vs private at run time.
 
     Public  -> ``github.com/<owner>/<repo>/archive/<ref>.tar.gz`` (no auth).
@@ -106,8 +91,8 @@ def _archive_request(cfg: dict[str, str], token: str) -> tuple[str, dict[str, st
     token, which 302-redirects to a short-lived signed download URL. Both accept a
     branch, tag, or commit SHA as ``<ref>``. The token rides in the Authorization
     header — never the URL — so it cannot leak into the Flight logs."""
-    base = cfg["GIT_REPO"].removesuffix(".git")
-    ref = cfg["GIT_REF"]
+    base = PROJECT_REPO.removesuffix(".git")
+    ref = PROJECT_REF
     if token:
         owner_repo = base.removeprefix("https://github.com/")
         log.info("fetching private repo %s @ %s", owner_repo, ref)
@@ -167,7 +152,7 @@ def _locate_subdir(checkout: Path, repo_subdir: str) -> Path:
 
 
 def discover(subdir: Path) -> tuple[Path, Path]:
-    """Within the fetched ``REPO_SUBDIR``, locate the dbt project dir (holds
+    """Within the fetched ``PROJECT_SUBDIR``, locate the dbt project dir (holds
     ``dbt_project.yml``) and the profiles dir (the nearest ancestor holding
     ``profiles.yml``). Scoping to ``subdir`` keeps it from matching a sibling
     project elsewhere in the repo (the archive contains the whole repo)."""
@@ -292,7 +277,7 @@ def append_run_results(con: "duckdb.DuckDBPyConnection", cfg: dict[str, str], ru
             r.value
         FROM doc, json_each(doc.j, '$.results') AS r
         """,
-        [str(run_results_path), cfg["GIT_REPO"], cfg["GIT_REF"], cfg["RUN_MODE"]],
+        [str(run_results_path), PROJECT_REPO, PROJECT_REF, cfg["RUN_MODE"]],
     )
     return json.loads(run_results_path.read_text())["results"]
 
@@ -314,7 +299,7 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        subdir = fetch_project(cfg, root)
+        subdir = fetch_project(root)
         project_dir, profiles_dir = discover(subdir)
         log.info("project=%s profiles=%s", project_dir, profiles_dir)
         env["DBT_PROFILES_DIR"] = str(profiles_dir)

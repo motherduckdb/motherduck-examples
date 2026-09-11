@@ -44,10 +44,11 @@ and the snapshot table queries — matches [flight-dbt-build-gh-archive](../flig
 
 ## How it works
 
-1. Read config from the environment (Flight `config` keys arrive as env vars).
+1. Read config from the environment. Flight `config` keys arrive as environment
+   variables.
 2. Connect to MotherDuck (`md:`) and `CREATE DATABASE IF NOT EXISTS` the
    snapshot and models databases.
-3. Check out `GIT_REPO`@`GIT_REF` into a temp dir: `git init` + `git fetch
+3. Check out the pinned source commit into a temp directory: `git init` + `git fetch
    --depth 1 origin <ref>` + `git checkout FETCH_HEAD`. A fetch refspec accepts
    a **branch, tag, or full commit SHA** uniformly, which is why the Flight
    fetches into `FETCH_HEAD` instead of using `git clone --branch` (that flag
@@ -57,8 +58,7 @@ and the snapshot table queries — matches [flight-dbt-build-gh-archive](../flig
    convention — `x-access-token` for GitHub, `oauth2` for GitLab) and git reads
    the token through a one-line `GIT_ASKPASS` script. No token: public clone.
 5. Discover the dbt project (`dbt_project.yml`) and its profile (`profiles.yml`)
-   inside `REPO_SUBDIR` of the checkout; empty `REPO_SUBDIR` means the repo root
-   is the project.
+   inside the pinned subdirectory.
 6. Run dbt with `--target DBT_TARGET`. `RUN_MODE=build` runs `dbt seed` then
    `dbt build`; `RUN_MODE=test` runs `dbt test` only. The profile reads its
    database name from `env_var()`, fed via `DB_ENV_VAR`/`MODELS_DATABASE`.
@@ -70,7 +70,7 @@ and the snapshot table queries — matches [flight-dbt-build-gh-archive](../flig
 
 ```
 config (env) ── git fetch+checkout ── dbt build/test ── run_results.json ── snapshot table
-  override per run  GIT_REPO@GIT_REF     on MotherDuck     one row per node    append, git_sha, run_at
+ per-run values      fixed source commit    on MotherDuck     one row per node    append, git_sha, run_at
 ```
 
 With `git_sha` on every row, regressions map straight to commits:
@@ -84,9 +84,8 @@ GROUP BY git_sha ORDER BY first_seen DESC;
 
 ## Questions to answer
 
-- Which git repo, ref, and subdirectory hold the dbt project? Is the host
-  GitHub (default `GIT_USERNAME` works) or another git host (set the username
-  convention it expects)?
+- Which repository commit and subdirectory hold the dbt project? Which Git host
+  token username does the source need?
 - Is the repo private (needs a `GIT_TOKEN` flights secret) or public?
 - Should each run **build** the project (`RUN_MODE=build`) or only **test** an
   already-built one (`RUN_MODE=test`)?
@@ -99,15 +98,14 @@ GROUP BY git_sha ORDER BY first_seen DESC;
 ## Caveats
 
 - **Run-time network to the git host.** The Flight clones at run time, so it
-  needs HTTPS egress to wherever `GIT_REPO` lives. Only HTTPS remotes are
+  needs HTTPS egress to the host in `PROJECT_REPO`. Only HTTPS remotes are
   supported — there is no SSH key material in a Flight, so `git@…` URLs won't
   work.
 - **A private repo needs a `GIT_TOKEN` secret — created and attached.** Without
   one the clone runs unauthenticated and fails on a private repo. See
   [Deploy as a Flight](#deploy-as-a-flight).
-- **`GIT_USERNAME` must match the host's convention.** `x-access-token` (the
-  default) is for GitHub PATs; GitLab expects `oauth2`. A wrong username reads
-  as a 401/403 on fetch even with a valid token.
+- **`GIT_USERNAME` must match the host's convention.** `x-access-token` is for
+  GitHub PATs. GitLab expects `oauth2`. Change the constant before deploying.
 - **Snapshot schema is a superset of flight-dbt-build-gh-archive's.** This template adds a
   `git_sha` column, so don't point both templates at the same
   `SNAPSHOT_DATABASE`.`SNAPSHOT_TABLE` — the INSERTs have different column
@@ -115,7 +113,7 @@ GROUP BY git_sha ORDER BY first_seen DESC;
   collide.
 - **The build runs every time, and concurrent builds conflict.** Parallel
   `build` runs collide on the shared tables (write-write conflict); use
-  `RUN_MODE=test` for fan-out or read-only runs. Build mode seeds before it
+  `RUN_MODE=test` for fan-out without model builds. Build mode seeds before it
   builds so a cold first run on a new database succeeds; test mode assumes the
   tables exist. Test failures are recorded but don't fail the Flight; node
   errors do. These behaviors are shared with — and explained in —
@@ -130,17 +128,13 @@ GROUP BY git_sha ORDER BY first_seen DESC;
 
 ## What you'll adjust
 
-Every knob is a config/env value read by `read_config()` at the top of
-`flight.py`; set them as Flight config rather than by editing code. The dbt
-project itself lives in the git repo you point the Flight at, not in `flight.py`.
+`read_config()` reads the per-run settings. Set them as Flight config. Change
+`PROJECT_REPO`, `PROJECT_REF`, `PROJECT_SUBDIR`, or `GIT_USERNAME` in `flight.py`
+and deploy a new version to use another source.
 
 | Config key | Default | Purpose |
 |---|---|---|
-| `GIT_REPO` | `…/motherduck-cookbook.git` | HTTPS remote of the repo holding the dbt project. Any git host. |
-| `GIT_REF` | `main` | Branch, tag, or full commit SHA to check out. |
-| `GIT_USERNAME` | `x-access-token` | Username git authenticates with when a token resolves (GitHub: `x-access-token`, GitLab: `oauth2`). Ignored for public repos. |
-| `REPO_SUBDIR` | `dbt-churn-prediction` | Path within the repo that holds the dbt project. Empty = repo root. |
-| `RUN_MODE` | `build` | `build`: `dbt build` (seed + run + test). `test`: `dbt test` only (read-only, parallel-safe). |
+| `RUN_MODE` | `build` | `build`: `dbt build` (seed + run + test). `test`: `dbt test` when another job owns the build. |
 | `DBT_TARGET` | `prod` | The target in the project's `profiles.yml` to run against (`dbt --target`). |
 | `DB_ENV_VAR` | `MOTHERDUCK_DATABASE` | The env var the profile's target reads its database name from, via `env_var()`. |
 | `MODELS_DATABASE` | `dbt_churn_flight_git` | Database the models build into; fed to the profile through `DB_ENV_VAR`. |
@@ -166,13 +160,11 @@ export MOTHERDUCK_TOKEN=your_token_here
 uv run --with-requirements requirements.txt flight.py
 ```
 
-Override any default inline, for example against your own private repo (locally
-`GIT_TOKEN` is a bare env var; deployed, it comes from the flights secret):
+Override a run setting inline. To use another project, change the source constants
+and deploy a new Flight version. Locally, `GIT_TOKEN` is a bare environment variable.
 
 ```bash
-GIT_REPO=https://github.com/you/your-dbt-repo.git GIT_REF=main REPO_SUBDIR= \
-GIT_TOKEN=github_pat_... \
-  uv run --with-requirements requirements.txt flight.py
+RUN_MODE=test uv run --with-requirements requirements.txt flight.py
 ```
 
 ### Deploy as a Flight
@@ -226,10 +218,9 @@ default); schedule updates are metadata-only and do not create a new version.
 - **Parameterized data.** Every value written into the snapshot row (repo, ref,
   SHA, run mode, and the node results parsed from `run_results.json`) is passed
   as a bound parameter, never string-formatted into SQL.
-- **Clone a trusted ref.** The Flight runs whatever code the checked-out ref
-  contains. Point `GIT_REPO`/`GIT_REF` at a repo and branch/tag you control; pin
-  a tag or SHA for reproducibility — the snapshot's `git_sha` column tells you
-  exactly what ran either way.
+- **Pinned source.** The Flight checks out the commit in `PROJECT_REF`. Per-run
+  config cannot change the code it executes. Change a `PROJECT_*` constant and
+  deploy a new version to use another source.
 
 ## Learn more
 

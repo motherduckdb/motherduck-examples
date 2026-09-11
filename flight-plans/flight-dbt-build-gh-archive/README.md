@@ -26,10 +26,9 @@ published_date: 2026-07-09
 A single-file Flight that runs a dbt project on MotherDuck and records what
 happened — downloading the dbt project as a GitHub archive **over HTTPS at run
 time** (no git binary needed) and appending dbt's own `run_results.json` to a
-snapshot table, **one row per node per run**. Point `GIT_REPO`/`GIT_REF` at your
-own dbt repo (public, or private via a Flights secret) and one deployed Flight
-then builds that project on a schedule while keeping a queryable history of
-build and test health — per-model status, timing, and test pass/fail over time.
+snapshot table, **one row per node per run**. The source repository, commit, and
+subdirectory are constants in `flight.py`. To build another project, change those
+constants and deploy a new Flight version.
 This is the dbt-only sibling of [flight-dbt-metricflow](../flight-dbt-metricflow),
 reusing the same HTTPS-archive fetch engine; where that template runs `mf query`
 against a semantic model, this one runs plain `dbt build` and snapshots the
@@ -44,16 +43,17 @@ clone, no repo history) and shells out to the `dbt` CLI against it. (The
 runtime does preinstall `git`; [flight-dbt-build-git](../flight-dbt-build-git)
 is the sibling that clones instead.)
 
-1. Read config from the environment (Flight `config` keys arrive as env vars).
+1. Read config from the environment. Flight `config` keys arrive as environment
+   variables.
 2. Connect to MotherDuck (`md:`) and `CREATE DATABASE IF NOT EXISTS` the
    snapshot database.
-3. Download `GIT_REPO`@`GIT_REF` as a gzip archive into a temp dir and extract
-   it. Public vs private is decided at run time: with no `GIT_TOKEN` secret it
+3. Download the pinned repository commit as a gzip archive into a temp directory
+   and extract it. With no `GIT_TOKEN` secret, the Flight
    uses the public `…/archive/<ref>.tar.gz` endpoint; with one it uses the
    authenticated GitHub API tarball endpoint
    (`api.github.com/repos/<owner>/<repo>/tarball/<ref>`).
 4. Discover the dbt project (`dbt_project.yml`) and its profile (`profiles.yml`)
-   inside `REPO_SUBDIR` of the checkout, so any layout works.
+   inside the pinned subdirectory.
 5. Run dbt with `--target DBT_TARGET`. `RUN_MODE=build` runs `dbt seed` then
    `dbt build` (run + test); `RUN_MODE=test` runs `dbt test` only. The project's own
    `profiles.yml` is used as-is; its MotherDuck target reads the database name
@@ -65,8 +65,8 @@ is the sibling that clones instead.)
    (`status`, `execution_time`, `failures`, …) are pulled out for easy querying.
 
 ```
-config (env) ── download archive ── dbt build/test ── run_results.json ── snapshot table
-  override per run   GIT_REPO@GIT_REF   on MotherDuck      one row per node    append, JSON, run_at
+config (env) ── download pinned archive ── dbt build/test ── run_results.json ── snapshot table
+ per-run values         fixed source commit       on MotherDuck      one row per node    append, JSON, run_at
 ```
 
 ### Build vs test mode
@@ -78,10 +78,9 @@ config (env) ── download archive ── dbt build/test ── run_results.js
   the build: it materializes the tables and records every node's result. (Seeding
   first is deliberate; see the cold-start caveat below.)
 - `RUN_MODE=test` runs `dbt test` only, for when a **separate job already built
-  the tables** (a dbt Cloud job, Airflow, another Flight). It touches no models,
-  so it is read-only and any number of `test` runs can run concurrently without
-  the write-write conflicts that shared-table rebuilds cause. Point `GIT_REPO`/
-  `GIT_REF` at the same repo the build job uses so the tests match the tables.
+  the tables**. It does not write models, but the Flight still creates databases
+  when needed and appends `run_results.json` rows. Point `PROJECT_REPO` and
+  `PROJECT_REF` at the same project version as the build job.
 
 `SELECT` scopes either mode to a subset of nodes (for example `tag:nightly`);
 empty means the whole project.
@@ -106,19 +105,15 @@ compile error before any node ran).
 
 A Flight's `config` is a `MAP(VARCHAR, VARCHAR)` of non-secret values, injected
 as environment variables. You override it **per run** without editing or
-re-versioning the Flight — for example, run the same deployed Flight in
-test-only mode against a feature branch:
+re-versioning the Flight. Source selection is not part of config.
 
 ```sql
--- create once with default config (RUN_MODE=build, the default repo)
+-- create once with default config
 FROM MD_CREATE_FLIGHT(
   name := 'dbt_build',
   source_code := '...flight.py...',
   requirements_txt := '...requirements.txt...',
   config := MAP {
-    'GIT_REPO': 'https://github.com/you/your-dbt-repo.git',
-    'GIT_REF': 'main',
-    'REPO_SUBDIR': 'analytics',
     'RUN_MODE': 'build',
     'DBT_TARGET': 'prod',
     'DB_ENV_VAR': 'MOTHERDUCK_DATABASE',
@@ -128,10 +123,10 @@ FROM MD_CREATE_FLIGHT(
   }
 );
 
--- run with a one-off override: test-only, against a feature branch, same Flight
+-- run with a one-off override: test-only, same Flight
 FROM MD_RUN_FLIGHT(
   flight_id := '…',
-  config := MAP {'RUN_MODE': 'test', 'GIT_REF': 'feature/new-tests'}
+  config := MAP {'RUN_MODE': 'test'}
 );
 ```
 
@@ -159,8 +154,7 @@ getting slower?" and "what did last night's build touch?".
 
 ## Questions to answer
 
-- Which git repo, ref, and subdirectory hold the dbt project (your fork, or the
-  default `dbt-churn-prediction` example)?
+- Which repository commit and subdirectory hold the dbt project?
 - Should each run **build** the project (`RUN_MODE=build`) or only **test** an
   already-built one (`RUN_MODE=test`)?
 - What target does the project's `profiles.yml` define (`DBT_TARGET`), and which
@@ -180,15 +174,11 @@ getting slower?" and "what did last night's build touch?".
   `…/archive/<ref>.tar.gz` URL 404s on a private repo. Store a token in a `TYPE
   flights` secret (see [Deploy as a Flight](#deploy-as-a-flight)); the Flight
   then uses the authenticated API endpoint.
-- **`GIT_REF` accepts a branch, tag, or commit SHA.** Both the public and
-  authenticated archive endpoints resolve any of the three. Pin to a tag or SHA
-  for reproducible runs.
 - **The build runs every time, and concurrent builds conflict.** With
   `RUN_MODE=build`, each run does `dbt build` against the same database, so a
   large project is slower and **parallel `build` runs collide** on the shared
   tables (MotherDuck rejects the losers with a write-write conflict). For fan-out
-  or read-only runs, use `RUN_MODE=test` — it touches no models and is
-  parallel-safe.
+  use `RUN_MODE=test`. It does not build models, but it still writes the snapshot.
 - **Build mode seeds before it builds.** The default project's staging models
   read the seed tables as dbt `source()`s, and dbt does not sequence a model
   after a seed it only reads as a source. So `RUN_MODE=build` runs `dbt seed`
@@ -209,16 +199,13 @@ getting slower?" and "what did last night's build touch?".
 
 ## What you'll adjust
 
-Every knob is a config/env value read by `read_config()` at the top of
-`flight.py`; set them as Flight config rather than by editing code. The dbt
-project itself lives in the git repo you point the Flight at, not in `flight.py`.
+`read_config()` reads the per-run settings. Set them as Flight config. Change
+`PROJECT_REPO`, `PROJECT_REF`, or `PROJECT_SUBDIR` in `flight.py` and deploy a
+new version to build another project.
 
 | Config key | Default | Purpose |
 |---|---|---|
-| `GIT_REPO` | `…/motherduck-cookbook.git` | GitHub repo holding the dbt project. Point at your fork. |
-| `GIT_REF` | `main` | Branch, tag, or commit SHA to download as an archive. |
-| `REPO_SUBDIR` | `dbt-churn-prediction` | Path within the repo that holds the dbt project. |
-| `RUN_MODE` | `build` | `build`: `dbt build` (seed + run + test). `test`: `dbt test` only (read-only, parallel-safe) when a separate job owns the build. |
+| `RUN_MODE` | `build` | `build`: `dbt build` (seed + run + test). `test`: `dbt test` when another job owns the build. |
 | `DBT_TARGET` | `prod` | The target in the project's `profiles.yml` to run against (`dbt --target`). |
 | `DB_ENV_VAR` | `MOTHERDUCK_DATABASE` | The env var the profile's target reads its database name from, via `env_var()`. |
 | `MODELS_DATABASE` | `dbt_churn_flight` | Database the models build into; fed to the profile through `DB_ENV_VAR`. |
@@ -245,14 +232,12 @@ export MOTHERDUCK_TOKEN=your_token_here
 uv run --with-requirements requirements.txt flight.py
 ```
 
-Override any default inline, for example test-only mode against your own repo.
-For a private repo, set `GIT_TOKEN` as a bare env var locally (deployed, it comes
-from the Flights secret instead):
+Override a run setting inline. To use another project, change the `PROJECT_*`
+constants and deploy a new Flight version. For a private repo, set `GIT_TOKEN` as
+a bare environment variable locally.
 
 ```bash
 RUN_MODE=test \
-GIT_REPO=https://github.com/you/your-dbt-repo.git GIT_REF=main REPO_SUBDIR=analytics \
-GIT_TOKEN=github_pat_... \
   uv run --with-requirements requirements.txt flight.py
 ```
 
@@ -264,8 +249,7 @@ arguments), passing:
 - `name`: a Flight name, for example `dbt_build`
 - `source_code`: the contents of [`flight.py`](flight.py)
 - `requirements_txt`: the contents of [`requirements.txt`](requirements.txt)
-- `config`: a `MAP` of the knobs above — `GIT_REPO`/`GIT_REF`/`REPO_SUBDIR` for
-  your project, `RUN_MODE`, `DBT_TARGET`/`DB_ENV_VAR`, `MODELS_DATABASE`, and
+- `config`: a `MAP` of `RUN_MODE`, `DBT_TARGET`/`DB_ENV_VAR`, `MODELS_DATABASE`, and
   `SNAPSHOT_DATABASE`/`SNAPSHOT_TABLE`
 - `flight_secret_names` (private repos only): the `TYPE flights` secrets to inject,
   e.g. `['git_auth']`. **Required for a private repo** — see below.
@@ -311,9 +295,9 @@ version.
 - **Parameterized data.** Every value written into the snapshot row (the git
   repo/ref, the run mode, and the node results parsed from `run_results.json`) is
   passed as a bound parameter, never string-formatted into SQL.
-- **Fetch a trusted ref.** The Flight runs whatever code the fetched ref
-  contains. Point `GIT_REPO`/`GIT_REF` at a repo and branch/tag you control; pin
-  a tag or SHA for reproducibility.
+- **Pinned source.** The Flight downloads the commit in `PROJECT_REF`. Per-run
+  config cannot change the code it executes. Change a `PROJECT_*` constant and
+  deploy a new version to use another source.
 - **Token in a secret, in the header.** A private repo's `GIT_TOKEN` belongs in a
   `TYPE flights` secret, never in `config` (which is stored on the Flight and
   logged). At run time the token is sent in the `Authorization` header of the
