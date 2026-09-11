@@ -10,6 +10,13 @@ type: example
 category: integrations
 features: [pg_endpoint]
 tags: [cloudflare, typescript, node-postgres]
+prompt: >-
+  I want a serverless HTTP API on Cloudflare Workers that queries MotherDuck over the
+  Postgres wire protocol with node-postgres, no DuckDB binary required, and returns
+  JSON. Help me adapt the "Query MotherDuck from Cloudflare Workers" recipe to my own
+  data and use case, using it as a guide:
+  https://motherduck.com/docs/cookbook/cloudflare-workers
+published_date: 2026-02-18
 ---
 
 # Query MotherDuck from Cloudflare Workers
@@ -57,7 +64,7 @@ postgresql://anyusername:<MOTHERDUCK_TOKEN>@<MOTHERDUCK_HOST>:5432/<MOTHERDUCK_D
 ## Questions to answer
 
 - Which MotherDuck database and schema should the Worker read from (default is `sample_data` / `nyc`)?
-- Which region is the MotherDuck organization in, US or EU, so the right `MOTHERDUCK_HOST` is set?
+- Which region is the MotherDuck organization in, US or EU, so the right `MOTHERDUCK_HOST` is set? Determine it with `SELECT region FROM md_user_info();`.
 - What routes and queries does the API need to expose, and what inputs do they accept?
 - How should request inputs be validated and bound (this example uses a regex check plus numbered parameters)?
 - Where will the MotherDuck token live (Wrangler secret for deploy, `.dev.vars` for local)?

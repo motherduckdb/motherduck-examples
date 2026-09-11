@@ -10,6 +10,13 @@ type: example
 category: integrations
 features: [pg_endpoint]
 tags: [vercel, nextjs, node-postgres]
+prompt: >-
+  I'm building a Vercel/Next.js backend that reads MotherDuck data through Next.js API
+  routes over the Postgres wire protocol with pooled, parameterized SQL and no DuckDB
+  binary. Help me adapt the "Query MotherDuck from Vercel and Next.js" recipe to my own
+  data and use case, using it as a guide:
+  https://motherduck.com/docs/cookbook/vercel-nextjs
+published_date: 2026-03-31
 ---
 
 # Query MotherDuck from Vercel and Next.js
@@ -98,7 +105,7 @@ to man-in-the-middle attacks.
 ## Questions to answer
 
 - Which MotherDuck database and schema should the routes read from (default is `sample_data.nyc.taxi`)?
-- Which region is the account in, so the right `MOTHERDUCK_HOST` is set (US vs EU)?
+- Which region is the account in, so the right `MOTHERDUCK_HOST` is set (US vs EU)? Determine it with `SELECT region FROM md_user_info();`.
 - What tables and columns do the API routes need to expose, and what query parameters drive them?
 - How will the token be provisioned in production: manual `vercel env add` or the MotherDuck Native Integration on Vercel?
 - What concurrency is expected, so the pool `max` and idle timeout can be tuned?

@@ -11,6 +11,13 @@ type: example
 category: end-to-end
 features: [pg_endpoint, shares]
 tags: [cloudflare, durable-objects, node-postgres, d3, typescript]
+prompt: >-
+  I want to build a full-stack Cloudflare Workers app that reads analytics from a
+  MotherDuck share over the Postgres endpoint and keeps a piece of real-time state (like
+  live votes) at the edge, with a D3 frontend. Help me adapt the "Cloudflare Workers Map
+  and Live Vote on MotherDuck" recipe to my own data and use case, using it as a guide:
+  https://motherduck.com/docs/cookbook/cloudflare-workers-duckoffee
+published_date: 2026-04-20
 ---
 
 # Cloudflare Workers Map and Live Vote on MotherDuck
@@ -100,7 +107,7 @@ ORDER BY 1
 
 - Which MotherDuck share or database holds the analytics, and what is its share URI?
 - What is the schema: a locations table, a per-day fact table, and a top-N dimension, plus the column names to use in the three queries?
-- What region is the account in, so you set the right `MOTHERDUCK_HOST`?
+- What region is the account in, so you set the right `MOTHERDUCK_HOST`? Determine it with `SELECT region FROM md_user_info();`.
 - What is the voting question and the candidate list (8 to 12 items, kebab-case `id` values)?
 - What lat/lon coordinates back each location and candidate city?
 - What brand palette, copy, and assets should the frontend use?
